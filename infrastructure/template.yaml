@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  Lambda sencilla creada con CloudFormation para aprender
+  Infrastructure as Code.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Ambiente donde se desplegará la aplicación.
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaToAssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Project
+          Value: hello-lambda
+
+  HelloLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub hello-lambda-${EnvironmentName}
+      Description: Lambda creada completamente mediante CloudFormation.
+      Runtime: python3.14
+      Handler: functions.salute.handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code: ../src/
+      MemorySize: 128
+      Timeout: 10
+
+      Environment:
+        Variables:
+          APP_ENV: !Ref EnvironmentName
+
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Project
+          Value: hello-lambda
+
+Outputs:
+  LambdaFunctionName:
+    Description: Nombre físico de la función Lambda.
+    Value: !Ref HelloLambdaFunction
+
+  LambdaFunctionArn:
+    Description: ARN de la función Lambda.
+    Value: !GetAtt HelloLambdaFunction.Arn
+
+  LambdaExecutionRoleArn:
+    Description: ARN del execution role.
+    Value: !GetAtt LambdaExecutionRole.Arn

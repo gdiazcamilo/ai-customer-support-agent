@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Lambda deployment artifacts
+build/
+dist/
+*.zip
+
+infrastructure/packaged-template.yaml
+
+# AWS SAM, por si se usa posteriormente
+.aws-sam/
+
+# Environment variables and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# IDE
+.vscode/
+.idea/
+EOF
