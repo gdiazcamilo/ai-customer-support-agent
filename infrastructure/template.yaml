@@ -11,7 +11,7 @@ Parameters:
     AllowedValues:
       - dev
       - prod
-    Description: Ambiente donde se desplegará la aplicación.
+    Description: Ambiente donde se desplegara la aplicacion.
 
 Resources:
   LambdaExecutionRole:
@@ -37,13 +37,13 @@ Resources:
         - Key: Project
           Value: hello-lambda
 
-  HelloLambdaFunction:
+  ApiLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub hello-lambda-${EnvironmentName}
+      FunctionName: !Sub ai-customer-support-agent-${EnvironmentName}
       Description: Lambda creada completamente mediante CloudFormation.
       Runtime: python3.14
-      Handler: functions.salute.handler.lambda_handler
+      Handler: functions.api.handler.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Code: ../src/
       MemorySize: 128
@@ -52,6 +52,8 @@ Resources:
       Environment:
         Variables:
           APP_ENV: !Ref EnvironmentName
+          SERVICE_NAME: ai-customer-support-agent
+          LOG_LEVEL: INFO
 
       Tags:
         - Key: Environment
@@ -59,15 +61,92 @@ Resources:
         - Key: Project
           Value: hello-lambda
 
+  SupportHttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub ai-customer-support-agent-api-${EnvironmentName}
+      Description: HTTP API for the AI Customer Support Agent
+      ProtocolType: HTTP
+    
+  ApiLambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SupportHttpApi
+      Description: Lambda proxy integration for the support API
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub
+        - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+        - FunctionArn: !GetAtt ApiLambdaFunction.Arn
+      PayloadFormatVersion: "2.0"
+      TimeoutInMillis: 10000
+
+  HealthRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SupportHttpApi
+      AuthorizationType: NONE
+      RouteKey: GET /health
+      Target: !Sub integrations/${ApiLambdaIntegration}
+
+  ChatRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SupportHttpApi
+      AuthorizationType: NONE
+      RouteKey: POST /chat
+      Target: !Sub integrations/${ApiLambdaIntegration}
+
+  DefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SupportHttpApi
+      AuthorizationType: NONE
+      RouteKey: $default
+      Target: !Sub integrations/${ApiLambdaIntegration}
+
+  ApiDefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref SupportHttpApi
+      StageName: $default
+      AutoDeploy: true
+  
+  ApiGatewayInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ApiLambdaFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*
+        - ApiId: !Ref SupportHttpApi
+  
+
 Outputs:
   LambdaFunctionName:
-    Description: Nombre físico de la función Lambda.
-    Value: !Ref HelloLambdaFunction
+    Description: Nombre fisico de la funcion Lambda.
+    Value: !Ref ApiLambdaFunction
 
   LambdaFunctionArn:
-    Description: ARN de la función Lambda.
-    Value: !GetAtt HelloLambdaFunction.Arn
+    Description: ARN de la funcion Lambda.
+    Value: !GetAtt ApiLambdaFunction.Arn
 
   LambdaExecutionRoleArn:
     Description: ARN del execution role.
     Value: !GetAtt LambdaExecutionRole.Arn
+
+  ApiId:
+    Description: ID of the API Gateway HTTP API
+    Value: !Ref SupportHttpApi
+
+  ApiUrl:
+    Description: Base URL of the API
+    Value: !Sub https://${SupportHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+
+  HealthUrl:
+    Description: Health endpoint URL
+    Value: !Sub https://${SupportHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/health
+
+  ChatUrl:
+    Description: Chat endpoint URL
+    Value: !Sub https://${SupportHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/chat

@@ -1,1 +1,2 @@
 aws-lambda-typing==2.20.0
+pytest
