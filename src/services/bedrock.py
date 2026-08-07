@@ -4,14 +4,24 @@ import logging
 
 import boto3
 
-from ..functions.api.config import SETTINGS
-from ..functions.api.logging_utils import log_event
+from functions.api.config import SETTINGS
+from functions.api.logging_utils import log_event
 
 logger = logging.getLogger()
 logger.setLevel(SETTINGS.log_level)
 
 
 bedrock_runtime = boto3.client("bedrock-runtime")
+
+
+SYSTEM_PROMPT = """
+You are a concise customer support assistant.
+
+- Answer clearly and briefly.
+- Do not invent information.
+- If you do not know the answer, say so.
+- Do not claim to have performed actions that were not actually performed.
+"""
 
 
 def generate_response(message: str, request_id: str | None) -> str:
@@ -25,14 +35,7 @@ def generate_response(message: str, request_id: str | None) -> str:
 
     response = bedrock_runtime.converse(
         modelId=SETTINGS.bedrock_model_id,
-        system=[
-            {
-                "text": (
-                    "You are a concise customer support assistant. "
-                    "Answer clearly and briefly."
-                )
-            }
-        ],
+        system=[{"text": SYSTEM_PROMPT}],
         messages=[
             {
                 "role": "user",

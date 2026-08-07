@@ -1,9 +1,8 @@
 import json
+from unittest.mock import patch
 
-from src.functions.api.router import route_request
-from src.functions.api.service import STATIC_CHAT_RESPONSE
-
-from .event_factory import make_api_event
+from functions.api.router import route_request
+from tests.unit.event_factory import make_api_event
 
 
 def body(response: dict[str, object]) -> dict[str, object]:
@@ -21,27 +20,36 @@ def test_get_health_returns_200_and_health_fields() -> None:
 
 
 def test_post_chat_with_valid_input_returns_200() -> None:
-    response = route_request(
-        make_api_event("POST", "/chat", body={"message": "hello"}),
-        request_id="req-1",
-    )
+    with patch(
+        "functions.api.router.process_chat",
+        return_value={"status": "accepted", "job_id": "job-1", "request_id": "req-1"},
+    ):
+        response = route_request(
+            make_api_event("POST", "/chat", body={"message": "hello"}),
+            request_id="req-1",
+        )
 
     assert response["statusCode"] == 200
 
 
-def test_post_chat_success_includes_normalized_message_and_static_response() -> None:
-    response = route_request(
-        make_api_event("POST", "/chat", body={"message": "  hello  "}),
-        request_id="req-1",
-    )
-
-    assert body(response) == {
-        "data": {
-            "message": "hello",
-            "response": STATIC_CHAT_RESPONSE,
-        },
+def test_post_chat_success_includes_processed_chat_data() -> None:
+    chat_data = {
+        "status": "accepted",
+        "job_id": "job-1",
         "request_id": "req-1",
     }
+
+    with patch("functions.api.router.process_chat", return_value=chat_data) as process_chat:
+        response = route_request(
+            make_api_event("POST", "/chat", body={"message": "  hello  "}),
+            request_id="req-1",
+        )
+
+    assert body(response) == {
+        "data": chat_data,
+        "request_id": "req-1",
+    }
+    process_chat.assert_called_once_with(message="hello", request_id="req-1")
 
 
 def test_post_chat_invalid_json_returns_400_invalid_json() -> None:

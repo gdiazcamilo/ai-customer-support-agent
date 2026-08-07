@@ -1,11 +1,10 @@
 import json
 import logging
-from typing import Any
 
 import boto3
 
-from .config import SETTINGS
-from .logging_utils import log_event
+from functions.api.config import SETTINGS
+from functions.api.logging_utils import log_event
 
 STATIC_CHAT_RESPONSE = "The support agent is not connected to AI yet."
 

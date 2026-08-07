@@ -4,10 +4,10 @@ from typing import Any
 
 import boto3
 
-from .config import SETTINGS
-from .logging_utils import log_event
-from .responses import error_response
-from .router import route_request
+from functions.api.config import SETTINGS
+from functions.api.logging_utils import log_event
+from functions.api.responses import error_response
+from functions.api.router import route_request
 
 logger = logging.getLogger()
 logger.setLevel(SETTINGS.log_level)

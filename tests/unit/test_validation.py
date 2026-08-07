@@ -2,14 +2,13 @@ import base64
 
 import pytest
 
-from src.functions.api.validation import (
+from functions.api.validation import (
     MAX_MESSAGE_LENGTH,
     ValidationError,
     parse_json_body,
     validate_chat_payload,
 )
-
-from .event_factory import make_api_event
+from tests.unit.event_factory import make_api_event
 
 
 def assert_validation_error(

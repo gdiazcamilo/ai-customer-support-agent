@@ -2,9 +2,8 @@ import json
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from src.functions.api.handler import handler
-
-from .event_factory import make_api_event
+from functions.api.handler import handler
+from tests.unit.event_factory import make_api_event
 
 
 def lambda_context(aws_request_id: str = "lambda-request-id") -> SimpleNamespace:
@@ -40,7 +39,7 @@ def test_lambda_request_id_is_fallback_when_api_gateway_request_id_absent() -> N
 
 def test_unexpected_route_exception_is_converted_to_500_response() -> None:
     with patch(
-        "src.functions.api.handler.route_request",
+        "functions.api.handler.route_request",
         side_effect=RuntimeError("database password leaked"),
     ):
         response = handler(
@@ -54,7 +53,7 @@ def test_unexpected_route_exception_is_converted_to_500_response() -> None:
 
 def test_500_response_does_not_expose_original_exception_message() -> None:
     with patch(
-        "src.functions.api.handler.route_request",
+        "functions.api.handler.route_request",
         side_effect=RuntimeError("secret original exception"),
     ):
         response = handler(
@@ -69,7 +68,7 @@ def test_500_response_does_not_expose_original_exception_message() -> None:
 
 def test_expected_request_id_is_included_in_500_response() -> None:
     with patch(
-        "src.functions.api.handler.route_request",
+        "functions.api.handler.route_request",
         side_effect=RuntimeError("boom"),
     ):
         response = handler(
@@ -81,7 +80,7 @@ def test_expected_request_id_is_included_in_500_response() -> None:
 
 
 def test_success_logging_paths_do_not_break_execution() -> None:
-    with patch("src.functions.api.handler.log_event") as log_event:
+    with patch("functions.api.handler.log_event") as log_event:
         response = handler(
             make_api_event("GET", "/health", request_id="api-1"),
             lambda_context("lambda-1"),
@@ -97,10 +96,10 @@ def test_success_logging_paths_do_not_break_execution() -> None:
 def test_failure_logging_path_does_not_break_exception_handling() -> None:
     with (
         patch(
-            "src.functions.api.handler.route_request",
+            "functions.api.handler.route_request",
             side_effect=RuntimeError("boom"),
         ),
-        patch("src.functions.api.handler.log_event") as log_event,
+        patch("functions.api.handler.log_event") as log_event,
     ):
         response = handler(
             make_api_event("GET", "/health", request_id="api-1"),

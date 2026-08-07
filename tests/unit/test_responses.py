@@ -1,6 +1,6 @@
 import json
 
-from src.functions.api.responses import error_response, json_response, success_response
+from functions.api.responses import error_response, json_response, success_response
 
 
 def response_body(response: dict[str, object]) -> dict[str, object]:

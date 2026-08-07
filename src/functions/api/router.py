@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from aws_lambda_typing.events import APIGatewayProxyEventV2
 
-from .config import SETTINGS
-from .responses import error_response, json_response, success_response
-from .service import get_health_status, process_chat
-from .validation import (
+from functions.api.config import SETTINGS
+from functions.api.responses import error_response, json_response, success_response
+from functions.api.service import get_health_status, process_chat
+from functions.api.validation import (
     ValidationError,
     parse_json_body,
     validate_chat_payload,

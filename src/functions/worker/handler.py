@@ -4,16 +4,13 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
-import boto3
-
+from functions.api.logging_utils import log_event
 from services.bedrock import generate_response
-
-from ..api.logging_utils import log_event
 
 if TYPE_CHECKING:
     from aws_lambda_typing.events import SQSEvent
     from aws_lambda_typing.events.sqs import SQSMessage
-from ..api.config import SETTINGS
+from functions.api.config import SETTINGS
 
 logger = logging.getLogger()
 logger.setLevel(SETTINGS.log_level)
@@ -40,7 +37,7 @@ def handler(event: SQSEvent, context: Any) -> dict:
             request_id = body.get("request_id")
 
             process_record(record)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - SQS batch failures must be isolated per record.
             log_event(
                 logger,
                 logging.ERROR,
