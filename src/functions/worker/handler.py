@@ -74,11 +74,10 @@ def process_job(job: dict[str, Any]) -> None:
     # Por ahora simulamos el procesamiento.
     message = job["message"]
 
-    logger.info(
-        json.dumps(
-            {
-                "event": "support_message_processed",
-                "message_length": len(message),
-            }
-        )
+    log_event(
+        logger,
+        logging.INFO,
+        "support_message_processed",
+        request_id=job.get("request_id"),
+        message_length=len(message),
     )

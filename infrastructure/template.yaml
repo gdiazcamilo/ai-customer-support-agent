@@ -50,6 +50,8 @@ Resources:
 
   ApiLambdaFunction:
     Type: AWS::Lambda::Function
+    DependsOn:
+      - ApiLambdaLogGroup
     Properties:
       FunctionName: !Sub ai-customer-support-agent-${EnvironmentName}
       Description: Lambda creada completamente mediante CloudFormation.
@@ -73,13 +75,20 @@ Resources:
         - Key: Project
           Value: hello-lambda
 
+  ApiLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/ai-customer-support-agent-${EnvironmentName}
+      RetentionInDays: 14
+
+
   SupportHttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
       Name: !Sub ai-customer-support-agent-api-${EnvironmentName}
       Description: HTTP API for the AI Customer Support Agent
       ProtocolType: HTTP
-    
+  
   ApiLambdaIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -116,13 +125,24 @@ Resources:
       RouteKey: $default
       Target: !Sub integrations/${ApiLambdaIntegration}
 
+  ApiGatewayAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/ai-customer-support-agent-${EnvironmentName}
+      RetentionInDays: 14
+
   ApiDefaultStage:
     Type: AWS::ApiGatewayV2::Stage
+    DependsOn:
+      - ApiGatewayAccessLogGroup
     Properties:
       ApiId: !Ref SupportHttpApi
       StageName: $default
       AutoDeploy: true
-  
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+        Format: '{"request_id":"$context.requestId","method":"$context.httpMethod","route_key":"$context.routeKey","path":"$context.path","status":"$context.status","response_length":"$context.responseLength","response_latency":"$context.responseLatency","source_ip":"$context.identity.sourceIp"}'
+
   ApiGatewayInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -185,6 +205,8 @@ Resources:
 
   SupportJobsWorkerLambdaFunction:
     Type: AWS::Lambda::Function
+    DependsOn:
+      - WorkerLambdaLogGroup
     Properties:
       FunctionName: !Sub ai-customer-support-worker-${EnvironmentName}
       Description: Processes support jobs pulled from SQS.
@@ -207,6 +229,12 @@ Resources:
           Value: !Ref EnvironmentName
         - Key: Project
           Value: ai-customer-support-agent
+  
+  WorkerLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/ai-customer-support-worker-${EnvironmentName}
+      RetentionInDays: 14
 
   SupportJobsEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping

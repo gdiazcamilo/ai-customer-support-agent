@@ -2,3 +2,4 @@ aws-lambda-typing==2.20.0
 black
 pytest
 ruff
+cfn-lint
