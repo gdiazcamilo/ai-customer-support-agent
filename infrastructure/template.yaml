@@ -68,6 +68,7 @@ Resources:
           SERVICE_NAME: ai-customer-support-agent
           LOG_LEVEL: INFO
           SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
+          BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
 
       Tags:
         - Key: Environment
@@ -196,6 +197,15 @@ Resources:
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
                 Resource: !GetAtt SupportJobsQueue.Arn
+        - PolicyName: CommunicationWithBedrock
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowBedrockInference
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.nova-micro-v1:0
 
       Tags:
         - Key: Environment
@@ -223,6 +233,7 @@ Resources:
           SERVICE_NAME: ai-customer-support-worker
           LOG_LEVEL: INFO
           SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
+          BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
 
       Tags:
         - Key: Environment
@@ -255,6 +266,10 @@ Outputs:
   LambdaFunctionArn:
     Description: ARN de la funcion Lambda.
     Value: !GetAtt ApiLambdaFunction.Arn
+
+  LambdaExecutionRoleName:
+    Description: Nombre del execution role.
+    Value: !Ref LambdaExecutionRole
 
   LambdaExecutionRoleArn:
     Description: ARN del execution role.
@@ -292,6 +307,14 @@ Outputs:
     Description: Worker Lambda function ARN
     Value: !GetAtt SupportJobsWorkerLambdaFunction.Arn
 
+  SupportJobsWorkerExecutionRoleName:
+    Description: Worker Lambda execution role name
+    Value: !Ref WorkerLambdaExecutionRole
+
+  SupportJobsWorkerExecutionRoleArn:
+    Description: Worker Lambda execution role ARN
+    Value: !GetAtt WorkerLambdaExecutionRole.Arn
+
   SupportJobsDeadLetterQueueUrl:
     Description: Dead queue URL
     Value: !Ref SupportJobsDeadLetterQueue
@@ -299,3 +322,5 @@ Outputs:
   SupportJobsDeadLetterQueueArn:
     Description: Dead queue ARN
     Value: !GetAtt SupportJobsDeadLetterQueue.Arn
+
+  

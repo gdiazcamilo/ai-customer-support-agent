@@ -4,6 +4,10 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
+import boto3
+
+from services.bedrock import generate_response
+
 from ..api.logging_utils import log_event
 
 if TYPE_CHECKING:
@@ -26,15 +30,25 @@ def handler(event: SQSEvent, context: Any) -> dict:
         batch_size=len(records),
         lambda_request_id=context.aws_request_id,
     )
+    request_id = None
 
     for record in records:
         message_id = record["messageId"]
 
         try:
+            body = json.loads(record["body"])
+            request_id = body.get("request_id")
+
             process_record(record)
-        except Exception:
+        except Exception as exc:
             log_event(
-                logger, logging.ERROR, "support_job_failed", message_id=message_id
+                logger,
+                logging.ERROR,
+                "support_job_failed",
+                message_id=message_id,
+                request_id=request_id,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
             )
 
             failures.append({"itemIdentifier": message_id})
@@ -71,13 +85,16 @@ def process_record(record: SQSMessage) -> None:
 
 
 def process_job(job: dict[str, Any]) -> None:
-    # Por ahora simulamos el procesamiento.
     message = job["message"]
+    request_id = job.get("request_id")
+
+    response = generate_response(message, request_id)
 
     log_event(
         logger,
         logging.INFO,
         "support_message_processed",
-        request_id=job.get("request_id"),
+        request_id=request_id,
         message_length=len(message),
+        response_length=len(response),
     )
