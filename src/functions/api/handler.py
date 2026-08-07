@@ -2,6 +2,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+import boto3
+
 from .config import SETTINGS
 from .logging_utils import log_event
 from .responses import error_response
@@ -16,6 +18,10 @@ class RequestIdentifier:
     value: str
     source: str
 
+
+
+
+sqs = boto3.client("sqs")
 
 def handler(
     event: dict[str, Any],

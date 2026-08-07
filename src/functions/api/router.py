@@ -60,7 +60,7 @@ def handle_chat(
             request_id=request_id,
         )
 
-    chat_data = process_chat(message=message)
+    chat_data = process_chat(message=message, request_id=request_id)
 
     return success_response(
         data=chat_data,

@@ -31,6 +31,17 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
+      Policies:
+        - PolicyName: SendMessagesToSupportJobsQueue
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowSendingSupportJobs
+                Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource: !GetAtt SupportJobsQueue.Arn
+
       Tags:
         - Key: Environment
           Value: !Ref EnvironmentName
@@ -54,6 +65,7 @@ Resources:
           APP_ENV: !Ref EnvironmentName
           SERVICE_NAME: ai-customer-support-agent
           LOG_LEVEL: INFO
+          SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
 
       Tags:
         - Key: Environment
@@ -121,6 +133,91 @@ Resources:
         - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*
         - ApiId: !Ref SupportHttpApi
   
+  SupportJobsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ai-customer-support-jobs-dlq-${EnvironmentName}
+
+  SupportJobsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ai-customer-support-jobs-${EnvironmentName}
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SupportJobsDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  WorkerLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowLambdaToAssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+      Policies:
+        - PolicyName: ConsumeSupportJobsQueue
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowConsumingSupportJobs
+                Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt SupportJobsQueue.Arn
+
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Project
+          Value: ai-customer-support-agent
+
+  SupportJobsWorkerLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ai-customer-support-worker-${EnvironmentName}
+      Description: Processes support jobs pulled from SQS.
+      Runtime: python3.14
+      Handler: functions.worker.handler.handler
+      Role: !GetAtt WorkerLambdaExecutionRole.Arn
+      Code: ../src/
+      MemorySize: 128
+      Timeout: 10
+
+      Environment:
+        Variables:
+          APP_ENV: !Ref EnvironmentName
+          SERVICE_NAME: ai-customer-support-worker
+          LOG_LEVEL: INFO
+          SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
+
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Project
+          Value: ai-customer-support-agent
+
+  SupportJobsEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt SupportJobsQueue.Arn
+      FunctionName: !Ref SupportJobsWorkerLambdaFunction
+      Enabled: true
+      BatchSize: 5
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+    
 
 Outputs:
   LambdaFunctionName:
@@ -150,3 +247,27 @@ Outputs:
   ChatUrl:
     Description: Chat endpoint URL
     Value: !Sub https://${SupportHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/chat
+
+  SupportJobsQueueUrl:
+    Description: Main Queue URL
+    Value: !Ref SupportJobsQueue
+
+  SupportJobsQueueArn:
+    Description: Main Queue ARN
+    Value: !GetAtt SupportJobsQueue.Arn
+
+  SupportJobsWorkerFunctionName:
+    Description: Worker Lambda function name
+    Value: !Ref SupportJobsWorkerLambdaFunction
+
+  SupportJobsWorkerFunctionArn:
+    Description: Worker Lambda function ARN
+    Value: !GetAtt SupportJobsWorkerLambdaFunction.Arn
+
+  SupportJobsDeadLetterQueueUrl:
+    Description: Dead queue URL
+    Value: !Ref SupportJobsDeadLetterQueue
+
+  SupportJobsDeadLetterQueueArn:
+    Description: Dead queue ARN
+    Value: !GetAtt SupportJobsDeadLetterQueue.Arn

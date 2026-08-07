@@ -7,6 +7,7 @@ class Settings:
     service_name: str
     environment: str
     log_level: str
+    support_jobs_queue_url: str
 
 
 def load_settings() -> Settings:
@@ -23,6 +24,7 @@ def load_settings() -> Settings:
             "LOG_LEVEL",
             "INFO",
         ),
+        support_jobs_queue_url=os.environ["SUPPORT_JOBS_QUEUE_URL"]
     )
 
 SETTINGS = load_settings()
