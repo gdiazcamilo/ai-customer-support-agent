@@ -44,6 +44,7 @@ def generate_response(message: str, request_id: str | None) -> str:
         ],
         inferenceConfig={
             "maxTokens": 200,
+            "temperature": 0.2,
         },
     )
 
