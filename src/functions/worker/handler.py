@@ -15,7 +15,7 @@ logger = logging.getLogger()
 logger.setLevel(SETTINGS.log_level)
 
 
-def handler(event: SQSEvent, context: Any) -> None:
+def handler(event: SQSEvent, context: Any) -> dict:
     records = event.get("Records", [])
     failures = []
 
@@ -39,7 +39,7 @@ def handler(event: SQSEvent, context: Any) -> None:
 
             failures.append({"itemIdentifier": message_id})
 
-        return {"batchItemFailures": failures}
+    return {"batchItemFailures": failures}
 
 
 def process_record(record: SQSMessage) -> None:
@@ -73,9 +73,6 @@ def process_record(record: SQSMessage) -> None:
 def process_job(job: dict[str, Any]) -> None:
     # Por ahora simulamos el procesamiento.
     message = job["message"]
-
-    if message == "fail":
-        raise RuntimeError("Intentional worker failure")
 
     logger.info(
         json.dumps(

@@ -14,6 +14,7 @@ logger.setLevel(SETTINGS.log_level)
 
 sqs_client = boto3.client("sqs")
 
+
 def get_health_status(
     service_name: str,
     environment: str,
@@ -38,13 +39,14 @@ def process_chat(message: str, request_id: str) -> dict:
         MessageBody=json.dumps(job),
     )
 
-    log_event(logger, 
-              logging.INFO, 
-              event_name="support_job_enqueued",
-              event="support_job_enqueued",
-              request_id=request_id,
-              message_id=response["MessageId"],
-              queue="support-jobs")
+    log_event(
+        logger,
+        logging.INFO,
+        event_name="support_job_enqueued",
+        request_id=request_id,
+        message_id=response["MessageId"],
+        queue="support-jobs",
+    )
 
     return {
         "status": "accepted",
