@@ -21,3 +21,11 @@ def log_event(
             default=str,
         ),
     )
+
+    print(
+        json.dumps(
+            payload,
+            default=str,
+        ),
+        flush=True,
+    )

@@ -39,7 +39,9 @@ def test_post_chat_success_includes_processed_chat_data() -> None:
         "request_id": "req-1",
     }
 
-    with patch("functions.api.router.process_chat", return_value=chat_data) as process_chat:
+    with patch(
+        "functions.api.router.process_chat", return_value=chat_data
+    ) as process_chat:
         response = route_request(
             make_api_event("POST", "/chat", body={"message": "  hello  "}),
             request_id="req-1",

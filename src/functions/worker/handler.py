@@ -5,7 +5,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from functions.api.logging_utils import log_event
-from services.bedrock import generate_response
+from services.agent import run_agent
 
 if TYPE_CHECKING:
     from aws_lambda_typing.events import SQSEvent
@@ -37,7 +37,9 @@ def handler(event: SQSEvent, context: Any) -> dict:
             request_id = body.get("request_id")
 
             process_record(record)
-        except Exception as exc:  # noqa: BLE001 - SQS batch failures must be isolated per record.
+        except (
+            Exception
+        ) as exc:  # noqa: BLE001 - SQS batch failures must be isolated per record.
             log_event(
                 logger,
                 logging.ERROR,
@@ -85,7 +87,7 @@ def process_job(job: dict[str, Any]) -> None:
     message = job["message"]
     request_id = job.get("request_id")
 
-    response = generate_response(message, request_id)
+    response = run_agent(message, request_id=request_id)
 
     log_event(
         logger,
