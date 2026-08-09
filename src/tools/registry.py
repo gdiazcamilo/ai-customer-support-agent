@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from tools.customers import CustomerNotFoundError, get_customer
+from tools.knowledge import search_policies
 from tools.orders import (
     OrderCannotBeCancelledError,
     OrderNotFoundError,
@@ -44,9 +45,11 @@ class ToolDefinition:
 GET_ORDER = ToolDefinition(
     name="get_order",
     description=(
-        "Retrieve information about a customer order by its order ID. "
-        "Use this tool when the user asks about the status or delivery "
-        "of a specific order."
+        "Retrieve information about a specific customer order by its order ID. "
+        "Use this tool only when the user is asking about the status, shipment, "
+        "delivery, or details of a particular existing order. "
+        "Do not use this tool for general questions about shipping methods, "
+        "shipping times, or company shipping policies."
     ),
     function=get_order,
     properties={
@@ -101,6 +104,28 @@ CANCEL_ORDER = ToolDefinition(
     requires_confirmation=True,
 )
 
+SEARCH_POLICIES = ToolDefinition(
+    name="search_policies",
+    description=(
+        "Search company policies and support documentation. "
+        "Use this tool for general questions about returns, warranties, "
+        "shipping methods, shipping times, international shipping, and other "
+        "company policies. Use it even when the user does not explicitly use "
+        "the word 'policy'. Do not use it to look up the status of a specific order."
+    ),
+    function=search_policies,
+    properties={
+        "query": {
+            "type": "string",
+            "description": (
+                "The user's question or topic to search for in company "
+                "policies and support documentation."
+            ),
+        }
+    },
+    required=("query",),
+    expected_errors=(),
+)
 
 TOOL_REGISTRY = {
     tool.name: tool
@@ -108,6 +133,7 @@ TOOL_REGISTRY = {
         GET_ORDER,
         GET_CUSTOMER,
         CANCEL_ORDER,
+        SEARCH_POLICIES,
     )
 }
 

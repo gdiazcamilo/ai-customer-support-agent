@@ -35,6 +35,7 @@ class ConfirmedAction:
 @dataclass(frozen=True)
 class ToolExecutionContext:
     confirmed_actions: frozenset[ConfirmedAction] = field(default_factory=frozenset)
+    request_id: str | None = None
 
 
 def build_confirmed_action(
@@ -97,7 +98,9 @@ def execute_tool(
             )
 
     try:
-        result = definition.function(**validated_input)
+        result = definition.function(
+            **{**validated_input, "request_id": context.request_id}
+        )
     except definition.expected_errors as exc:
         return ToolExecutionResult(
             success=False,

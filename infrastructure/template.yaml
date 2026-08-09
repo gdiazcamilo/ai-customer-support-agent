@@ -69,6 +69,7 @@ Resources:
           LOG_LEVEL: INFO
           SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
           BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
+          KNOWLEDGE_BASE_ID: !Ref SupportKnowledgeBase
 
       Tags:
         - Key: Environment
@@ -206,6 +207,11 @@ Resources:
                 Action:
                   - bedrock:InvokeModel
                 Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.nova-micro-v1:0
+              - Sid: AllowBedrockKnowledgeBaseAccess
+                Effect: Allow
+                Action:
+                  - bedrock:Retrieve
+                Resource: !GetAtt SupportKnowledgeBase.KnowledgeBaseArn
 
       Tags:
         - Key: Environment
@@ -234,6 +240,7 @@ Resources:
           LOG_LEVEL: INFO
           SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
           BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
+          KNOWLEDGE_BASE_ID: !Ref SupportKnowledgeBase
 
       Tags:
         - Key: Environment
@@ -256,7 +263,104 @@ Resources:
       BatchSize: 5
       FunctionResponseTypes:
         - ReportBatchItemFailures
-    
+  
+  KnowledgeBaseSourceBucket:
+    Type: AWS::S3::Bucket
+  
+  KnowledgeBaseVectorBucket:
+    Type: AWS::S3Vectors::VectorBucket
+    Properties:
+      VectorBucketName: !Sub squad-prep-ai-customer-support-knowledge-base-vectors-${EnvironmentName}
+  
+  KnowledgeBaseVectorIndex:
+    Type: AWS::S3Vectors::Index
+    Properties:
+      VectorBucketArn: !Ref KnowledgeBaseVectorBucket
+      IndexName: knowledge-base-index
+      DataType: float32
+      Dimension: 1024
+      DistanceMetric: cosine
+
+  KnowledgeBaseServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - bedrock.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+        - PolicyName: IngestDocsForRAG
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowListSourceBucket
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !GetAtt KnowledgeBaseSourceBucket.Arn
+
+              - Sid: AllowReadFromSourceBucket
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "${KnowledgeBaseSourceBucket.Arn}/*"
+
+              - Sid: AllowInvokeEmbeddingModel
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.titan-embed-text-v2:0
+
+              - Sid: AllowAccessToVectorIndex
+                Effect: Allow
+                Action:
+                  - s3vectors:PutVectors
+                  - s3vectors:GetVectors
+                  - s3vectors:DeleteVectors
+                  - s3vectors:QueryVectors
+                  - s3vectors:GetIndex
+                Resource: !GetAtt KnowledgeBaseVectorIndex.IndexArn
+
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Project
+          Value: ai-customer-support-agent
+  
+  SupportKnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    Properties:
+      Name: !Sub ai-customer-support-knowledge-base-${EnvironmentName}
+      RoleArn: !GetAtt KnowledgeBaseServiceRole.Arn
+      KnowledgeBaseConfiguration:
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.titan-embed-text-v2:0
+      StorageConfiguration:
+        Type: S3_VECTORS
+        S3VectorsConfiguration:
+          IndexArn: !GetAtt KnowledgeBaseVectorIndex.IndexArn
+  
+  SupportKnowledgeBaseDataSource:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: !Sub ai-customer-support-knowledge-base-data-source-${EnvironmentName}
+      KnowledgeBaseId: !Ref SupportKnowledgeBase
+      DataDeletionPolicy: DELETE
+      DataSourceConfiguration:
+        Type: S3
+        S3Configuration:
+          BucketArn: !GetAtt KnowledgeBaseSourceBucket.Arn
+
+        
+
+
 
 Outputs:
   LambdaFunctionName:
@@ -323,4 +427,14 @@ Outputs:
     Description: Dead queue ARN
     Value: !GetAtt SupportJobsDeadLetterQueue.Arn
 
-  
+  KnowledgeBaseSourceBucketName:
+    Description: S3 bucket containing the Knowledge Base source documents
+    Value: !Ref KnowledgeBaseSourceBucket
+
+  KnowledgeBaseId:
+    Description: Bedrock Knowledge Base ID
+    Value: !Ref SupportKnowledgeBase
+
+  KnowledgeBaseDataSourceId:
+    Description: Bedrock Knowledge Base data source ID
+    Value: !GetAtt SupportKnowledgeBaseDataSource.DataSourceId

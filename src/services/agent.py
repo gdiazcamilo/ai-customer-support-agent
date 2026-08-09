@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from dataclasses import dataclass, field
 from typing import Any
 
 import boto3
@@ -17,6 +18,7 @@ from tools.executor import (
 from tools.registry import BEDROCK_TOOLS
 
 logger = logging.getLogger()
+
 logger.setLevel(SETTINGS.log_level)
 
 bedrock_runtime = boto3.client("bedrock-runtime")
@@ -29,6 +31,18 @@ You are a concise customer support assistant.
 - Use tools when you need external information.
 - Do not invent information.
 - Do not claim that an action happened unless a tool successfully performed it.
+- When using retrieved company documentation, only answer with information supported by the retrieved content.
+- If the retrieved content does not contain enough information to answer, say that you do not have enough information.
+- Distinguish general policy questions from requests about specific entities:
+  use policy search for general shipping, return, or warranty questions;
+  use order lookup only when the user is asking about a specific existing order.
+- Do not imply that you can perform future research or follow-up actions
+  unless an available tool actually supports that action.
+- When answering from retrieved company documentation, do not add facts,
+  explanations, assumptions, or general knowledge that are not explicitly
+  supported by the retrieved content.
+- Do not include source URLs, document links, or citations in your answer.
+  Source attribution is handled separately by the application.
 """
 
 
@@ -39,12 +53,19 @@ class AgentMaxIterationsError(Exception):
     pass
 
 
+@dataclass
+class AgentResult:
+    answer: str
+    retrieved_sources: list[str] = field(default_factory=list)
+
+
 def run_agent(
     message: str,
     request_id: str | None = None,
     execution_context: ToolExecutionContext | None = None,
-) -> str:
-    execution_context = execution_context or ToolExecutionContext()
+) -> AgentResult:
+    sources: set[str] = set()
+    execution_context = execution_context or ToolExecutionContext(request_id=request_id)
     log_event(
         logger,
         logging.INFO,
@@ -117,15 +138,19 @@ def run_agent(
                 response_length=len(final_text),
             )
 
-            return final_text
+            return AgentResult(
+                answer=final_text,
+                retrieved_sources=sorted(sources),
+            )
 
         if stop_reason == "tool_use":
-            tool_result_message = execute_tool_requests(
+            tool_result_message, tool_sources = execute_tool_requests(
                 assistant_message,
                 request_id=request_id,
                 execution_context=execution_context,
             )
 
+            sources.update(tool_sources)
             messages.append(tool_result_message)
             continue
 
@@ -145,16 +170,17 @@ def execute_tool_requests(
     assistant_message: dict[str, Any],
     request_id: str | None = None,
     execution_context: ToolExecutionContext | None = None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[str]]:
 
     result_blocks = []
+    sources = []
 
     for block in assistant_message["content"]:
         if "toolUse" not in block:
             continue
 
         tool_use = block["toolUse"]
-        tool_result = execute_tool_request(
+        tool_result, tool_sources = execute_tool_request(
             tool_use, request_id=request_id, execution_context=execution_context
         )
 
@@ -163,6 +189,7 @@ def execute_tool_requests(
                 "toolResult": tool_result,
             }
         )
+        sources.extend(tool_sources)
 
     if not result_blocks:
         raise RuntimeError("Bedrock returned tool_use but no toolUse blocks")
@@ -170,14 +197,14 @@ def execute_tool_requests(
     return {
         "role": "user",
         "content": result_blocks,
-    }
+    }, sources
 
 
 def execute_tool_request(
     tool_use: dict[str, Any],
     request_id: str | None = None,
     execution_context: ToolExecutionContext | None = None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[str]]:
     log_event(
         logger,
         logging.INFO,
@@ -186,6 +213,8 @@ def execute_tool_request(
         tool_name=tool_use["name"],
         tool_use_id=tool_use["toolUseId"],
     )
+
+    retrieved_sources = []
 
     try:
         result = execute_tool(
@@ -212,7 +241,7 @@ def execute_tool_request(
                 }
             ],
             "status": "error",
-        }
+        }, retrieved_sources
 
     if result.success:
         log_event(
@@ -225,6 +254,12 @@ def execute_tool_request(
             status="success",
         )
 
+        if tool_use["name"] == "search_policies":
+            for item in result.content.get("results", []):
+                source = item.get("source")
+                if source:
+                    retrieved_sources.append(source)
+
         return {
             "toolUseId": tool_use["toolUseId"],
             "content": [
@@ -233,7 +268,7 @@ def execute_tool_request(
                 }
             ],
             "status": "success",
-        }
+        }, retrieved_sources
 
     log_event(
         logger,
@@ -253,7 +288,7 @@ def execute_tool_request(
             }
         ],
         "status": "error",
-    }
+    }, retrieved_sources
 
 
 def extract_text(

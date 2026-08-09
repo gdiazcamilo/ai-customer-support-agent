@@ -95,5 +95,6 @@ def process_job(job: dict[str, Any]) -> None:
         "support_message_processed",
         request_id=request_id,
         message_length=len(message),
-        response_length=len(response),
+        response_length=len(response.answer),
+        retrieved_sources=response.retrieved_sources,
     )
