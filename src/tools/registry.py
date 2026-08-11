@@ -25,6 +25,7 @@ class ToolDefinition:
     expected_errors: tuple[type[Exception], ...]
     side_effects: bool = False
     requires_confirmation: bool = False
+    pass_request_id: bool = False
 
     def bedrock_spec(self) -> dict[str, Any]:
         return {
@@ -125,6 +126,7 @@ SEARCH_POLICIES = ToolDefinition(
     },
     required=("query",),
     expected_errors=(),
+    pass_request_id=True,
 )
 
 TOOL_REGISTRY = {

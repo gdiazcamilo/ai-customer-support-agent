@@ -43,6 +43,9 @@ You are a concise customer support assistant.
   supported by the retrieved content.
 - Do not include source URLs, document links, or citations in your answer.
   Source attribution is handled separately by the application.
+- Use the conversation history provided in the messages to answer follow-up questions.
+- When previous messages are available, do not claim that you cannot remember or access the previous conversation.
+- If the user asks what they were discussing, summarize the relevant previous messages.
 """
 
 
@@ -63,6 +66,7 @@ def run_agent(
     message: str,
     request_id: str | None = None,
     execution_context: ToolExecutionContext | None = None,
+    conversation_history: list[dict[str, Any]] | None = None,
 ) -> AgentResult:
     sources: set[str] = set()
     execution_context = execution_context or ToolExecutionContext(request_id=request_id)
@@ -74,7 +78,9 @@ def run_agent(
         model_id=SETTINGS.bedrock_model_id,
     )
 
-    messages: list[dict[str, Any]] = [
+    messages: list[dict[str, Any]] = list(conversation_history or [])
+
+    messages.append(
         {
             "role": "user",
             "content": [
@@ -83,7 +89,7 @@ def run_agent(
                 }
             ],
         }
-    ]
+    )
 
     for iteration in range(1, MAX_AGENT_ITERATIONS + 1):
         response = bedrock_runtime.converse(

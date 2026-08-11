@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from functions.api.logging_utils import log_event
 from services.agent import run_agent
+from services.agentcore import invoke_agent
 
 if TYPE_CHECKING:
     from aws_lambda_typing.events import SQSEvent
@@ -87,7 +88,10 @@ def process_job(job: dict[str, Any]) -> None:
     message = job["message"]
     request_id = job.get("request_id")
 
-    response = run_agent(message, request_id=request_id)
+    response = invoke_agent(
+        message,
+        request_id=request_id,
+    )
 
     log_event(
         logger,

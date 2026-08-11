@@ -10,6 +10,8 @@ class Settings:
     support_jobs_queue_url: str
     bedrock_model_id: str
     knowledge_base_id: str
+    agentcore_memory_id: str
+    agentcore_runtime_arn: str | None
 
 
 def load_settings() -> Settings:
@@ -29,6 +31,8 @@ def load_settings() -> Settings:
         support_jobs_queue_url=os.environ["SUPPORT_JOBS_QUEUE_URL"],
         bedrock_model_id=os.environ["BEDROCK_MODEL_ID"],
         knowledge_base_id=os.environ["KNOWLEDGE_BASE_ID"],
+        agentcore_runtime_arn=os.environ.get("AGENTCORE_RUNTIME_ARN"),
+        agentcore_memory_id=os.environ["AGENTCORE_MEMORY_ID"],
     )
 
 

@@ -98,9 +98,12 @@ def execute_tool(
             )
 
     try:
-        result = definition.function(
-            **{**validated_input, "request_id": context.request_id}
-        )
+        function_arguments = dict(validated_input)
+
+        if definition.pass_request_id:
+            function_arguments["request_id"] = context.request_id
+
+        result = definition.function(**function_arguments)
     except definition.expected_errors as exc:
         return ToolExecutionResult(
             success=False,
