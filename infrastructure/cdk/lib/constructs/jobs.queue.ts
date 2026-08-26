@@ -10,11 +10,11 @@ export class JobsQueue extends Construct {
         super(scope, id);
 
         this.deadLetterQueue = new sqs.Queue(this, 'DeadLetterQueue', {
-            queueName: 'ai-customer-support-jobs-dlq-cdk-dev-temp',
+            queueName: 'ai-customer-support-jobs-dlq-cdk-dev',
         });
 
         this.queue = new sqs.Queue(this, 'Queue', {
-            queueName: 'ai-customer-support-jobs-cdk-dev-temp',
+            queueName: 'ai-customer-support-jobs-cdk-dev',
             visibilityTimeout: Duration.seconds(60),
             deadLetterQueue: {
                 queue: this.deadLetterQueue,

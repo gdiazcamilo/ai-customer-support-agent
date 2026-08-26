@@ -5,14 +5,14 @@ import * as path from 'path';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as s3vectors from 'aws-cdk-lib/aws-s3vectors';
-import * as bedrock from 'aws-cdk-lib/aws-bedrock';
 import * as agentcore from 'aws-cdk-lib/aws-bedrockagentcore';
+
 import { Construct } from "constructs";
-import { JobsQueue } from "./constructs/jobs.queue";
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+
+import { JobsQueue } from "./constructs/jobs.queue";
+import { KnowledgeBase } from './constructs/knowledge-base';
 
 export class CustomerSupportAgentCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -24,116 +24,9 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
       value: jobsQueue.queue.queueUrl
     });
 
-    // Knowledge base
-
-    const knowledgeBaseSourceBucket = new s3.Bucket(
-      this,
-      'KnowledgeBaseSourceBucket',
-    );
-
-    const knowledgeBaseVectorBucket = new s3vectors.CfnVectorBucket(
-      this,
-      'KnowledgeBaseVectorBucket',
-      {
-        vectorBucketName:
-          'squad-prep-ai-customer-support-knowledge-base-vectors-cdk-dev',
-      },
-    );
-
-    const knowledgeBaseVectorIndex = new s3vectors.CfnIndex(
-      this,
-      'KnowledgeBaseVectorIndex',
-      {
-        vectorBucketArn: knowledgeBaseVectorBucket.attrVectorBucketArn,
-        indexName: 'knowledge-base-index',
-        dataType: 'float32',
-        dimension: 1024,
-        distanceMetric: 'cosine',
-      },
-    );
+    const knowledge = new KnowledgeBase(this, 'KnowledgeBase');
 
 
-
-    const knowledgeBaseServiceRole = new iam.Role(
-      this,
-      'KnowledgeBaseServiceRole',
-      {
-        assumedBy: new iam.ServicePrincipal('bedrock.amazonaws.com'),
-      },
-    );
-
-    knowledgeBaseSourceBucket.grantRead(knowledgeBaseServiceRole);
-
-    const embeddingModelArn = cdk.Stack.of(this).formatArn({
-      service: 'bedrock',
-      account: '',
-      resource: 'foundation-model',
-      resourceName: 'amazon.titan-embed-text-v2:0',
-    });
-
-    knowledgeBaseServiceRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ['bedrock:InvokeModel'],
-        resources: [embeddingModelArn],
-      }),
-    );
-
-    knowledgeBaseServiceRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: [
-          's3vectors:PutVectors',
-          's3vectors:GetVectors',
-          's3vectors:DeleteVectors',
-          's3vectors:QueryVectors',
-          's3vectors:GetIndex',
-        ],
-        resources: [knowledgeBaseVectorIndex.attrIndexArn],
-      }),
-    );
-
-
-
-    const knowledgeBase = new bedrock.CfnKnowledgeBase(
-      this,
-      'SupportKnowledgeBase',
-      {
-        name: 'ai-customer-support-knowledge-base-cdk-dev',
-        roleArn: knowledgeBaseServiceRole.roleArn,
-
-        knowledgeBaseConfiguration: {
-          type: 'VECTOR',
-          vectorKnowledgeBaseConfiguration: {
-            embeddingModelArn,
-          },
-        },
-
-        storageConfiguration: {
-          type: 'S3_VECTORS',
-          s3VectorsConfiguration: {
-            indexArn: knowledgeBaseVectorIndex.attrIndexArn,
-          },
-        },
-      },
-    );
-
-    const knowledgeBaseDataSource = new bedrock.CfnDataSource(
-      this,
-      'SupportKnowledgeBaseDataSource',
-      {
-        name: 'ai-customer-support-knowledge-base-data-source-cdk-dev',
-
-        knowledgeBaseId: knowledgeBase.attrKnowledgeBaseId,
-
-        dataDeletionPolicy: 'DELETE',
-
-        dataSourceConfiguration: {
-          type: 'S3',
-          s3Configuration: {
-            bucketArn: knowledgeBaseSourceBucket.bucketArn,
-          },
-        },
-      },
-    );
 
     const agentMemory = new agentcore.Memory(this, 'SupportAgentMemory', {
       memoryName: 'ai_customer_support_memory_cdk_dev',
@@ -193,7 +86,7 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
         LOG_LEVEL: 'INFO',
         SUPPORT_JOBS_QUEUE_URL: jobsQueue.queue.queueUrl,
         BEDROCK_MODEL_ID: 'amazon.nova-micro-v1:0',
-        KNOWLEDGE_BASE_ID: knowledgeBase.attrKnowledgeBaseId,
+        KNOWLEDGE_BASE_ID: knowledge.knowledgeBase.attrKnowledgeBaseId,
         AGENTCORE_MEMORY_ID: agentMemory.memoryId,
       },
     });
@@ -216,7 +109,7 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
     agentRuntime.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['bedrock:Retrieve'],
-        resources: [knowledgeBase.attrKnowledgeBaseArn],
+        resources: [knowledge.knowledgeBase.attrKnowledgeBaseArn],
       }),
     );
 
@@ -294,7 +187,7 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
         LOG_LEVEL: 'INFO',
         SUPPORT_JOBS_QUEUE_URL: jobsQueue.queue.queueUrl,
         BEDROCK_MODEL_ID: 'amazon.nova-micro-v1:0',
-        KNOWLEDGE_BASE_ID: knowledgeBase.attrKnowledgeBaseId,
+        KNOWLEDGE_BASE_ID: knowledge.knowledgeBase.attrKnowledgeBaseId,
         AGENTCORE_RUNTIME_ARN: agentRuntime.agentRuntimeArn,
         AGENTCORE_MEMORY_ID: agentMemory.memoryId,
       },
@@ -309,6 +202,10 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
       description: 'HTTP Api for the AI Customer Support Agent',
       defaultIntegration: apiIntegration,
       createDefaultStage: false,
+    });
+
+    new cdk.CfnOutput(this, 'ApiUrl', {
+      value: httpApi.apiEndpoint
     });
 
     const apiAccessLogGroup = new logs.LogGroup(this, 'ApiGatewayAccessLogGroup', {
@@ -358,7 +255,7 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
         LOG_LEVEL: 'INFO',
         SUPPORT_JOBS_QUEUE_URL: jobsQueue.queue.queueUrl,
         BEDROCK_MODEL_ID: 'amazon.nova-micro-v1:0',
-        KNOWLEDGE_BASE_ID: knowledgeBase.attrKnowledgeBaseId,
+        KNOWLEDGE_BASE_ID: knowledge.knowledgeBase.attrKnowledgeBaseId,
         AGENTCORE_RUNTIME_ARN: agentRuntime.agentRuntimeArn,
         AGENTCORE_MEMORY_ID: agentMemory.memoryId,
       },
