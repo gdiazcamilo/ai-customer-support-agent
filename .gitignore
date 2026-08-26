@@ -25,3 +25,4 @@ infrastructure/packaged-template.yaml
 .vscode/
 .idea/
 EOF
+*.code-workspace

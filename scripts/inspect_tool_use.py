@@ -9,6 +9,7 @@ from tools.executor import execute_tool
 from tools.orders import OrderNotFoundError
 from tools.specs import GET_ORDER_TOOL
 
+
 MODEL_ID = os.getenv(
     "BEDROCK_MODEL_ID",
     "amazon.nova-micro-v1:0",

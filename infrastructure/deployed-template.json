@@ -1,0 +1,1268 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Lambda sencilla creada con CloudFormation para aprender Infrastructure as Code.\n",
+  "Parameters": {
+    "EnvironmentName": {
+      "Type": "String",
+      "Default": "dev",
+      "AllowedValues": [
+        "dev",
+        "prod"
+      ],
+      "Description": "Ambiente donde se desplegara la aplicacion."
+    }
+  },
+  "Resources": {
+    "LambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowLambdaToAssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "SendMessagesToSupportJobsQueue",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "AllowSendingSupportJobs",
+                  "Effect": "Allow",
+                  "Action": [
+                    "sqs:SendMessage"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "SupportJobsQueue",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": {
+              "Ref": "EnvironmentName"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "hello-lambda"
+          }
+        ]
+      }
+    },
+    "ApiLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": [
+        "ApiLambdaLogGroup"
+      ],
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "ai-customer-support-agent-${EnvironmentName}"
+        },
+        "Description": "Lambda creada completamente mediante CloudFormation.",
+        "Runtime": "python3.14",
+        "Handler": "functions.api.handler.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "LambdaExecutionRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": "squad-prep-artifacts-214078205303-us-east-1",
+          "S3Key": "ai-customer-support-agent/dev/0128d6b387b21cb1d78a9a90eee03882"
+        },
+        "MemorySize": 128,
+        "Timeout": 10,
+        "Environment": {
+          "Variables": {
+            "APP_ENV": {
+              "Ref": "EnvironmentName"
+            },
+            "SERVICE_NAME": "ai-customer-support-agent",
+            "LOG_LEVEL": "INFO",
+            "SUPPORT_JOBS_QUEUE_URL": {
+              "Ref": "SupportJobsQueue"
+            },
+            "BEDROCK_MODEL_ID": "amazon.nova-micro-v1:0",
+            "KNOWLEDGE_BASE_ID": {
+              "Ref": "SupportKnowledgeBase"
+            },
+            "AGENTCORE_RUNTIME_ARN": {
+              "Fn::GetAtt": [
+                "SupportAgentRuntime",
+                "AgentRuntimeArn"
+              ]
+            },
+            "AGENTCORE_MEMORY_ID": {
+              "Fn::GetAtt": [
+                "SupportAgentMemory",
+                "MemoryId"
+              ]
+            }
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": {
+              "Ref": "EnvironmentName"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "hello-lambda"
+          }
+        ]
+      }
+    },
+    "ApiLambdaLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/ai-customer-support-agent-${EnvironmentName}"
+        },
+        "RetentionInDays": 14
+      }
+    },
+    "SupportHttpApi": {
+      "Type": "AWS::ApiGatewayV2::Api",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "ai-customer-support-agent-api-${EnvironmentName}"
+        },
+        "Description": "HTTP API for the AI Customer Support Agent",
+        "ProtocolType": "HTTP"
+      }
+    },
+    "ApiLambdaIntegration": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "SupportHttpApi"
+        },
+        "Description": "Lambda proxy integration for the support API",
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::Sub": [
+            "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations",
+            {
+              "FunctionArn": {
+                "Fn::GetAtt": [
+                  "ApiLambdaFunction",
+                  "Arn"
+                ]
+              }
+            }
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 10000
+      }
+    },
+    "HealthRoute": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "SupportHttpApi"
+        },
+        "AuthorizationType": "NONE",
+        "RouteKey": "GET /health",
+        "Target": {
+          "Fn::Sub": "integrations/${ApiLambdaIntegration}"
+        }
+      }
+    },
+    "ChatRoute": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "SupportHttpApi"
+        },
+        "AuthorizationType": "NONE",
+        "RouteKey": "POST /chat",
+        "Target": {
+          "Fn::Sub": "integrations/${ApiLambdaIntegration}"
+        }
+      }
+    },
+    "DefaultRoute": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "SupportHttpApi"
+        },
+        "AuthorizationType": "NONE",
+        "RouteKey": "$default",
+        "Target": {
+          "Fn::Sub": "integrations/${ApiLambdaIntegration}"
+        }
+      }
+    },
+    "ApiGatewayAccessLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/apigateway/ai-customer-support-agent-${EnvironmentName}"
+        },
+        "RetentionInDays": 14
+      }
+    },
+    "ApiDefaultStage": {
+      "Type": "AWS::ApiGatewayV2::Stage",
+      "DependsOn": [
+        "ApiGatewayAccessLogGroup"
+      ],
+      "Properties": {
+        "ApiId": {
+          "Ref": "SupportHttpApi"
+        },
+        "StageName": "$default",
+        "AutoDeploy": true,
+        "AccessLogSettings": {
+          "DestinationArn": {
+            "Fn::GetAtt": [
+              "ApiGatewayAccessLogGroup",
+              "Arn"
+            ]
+          },
+          "Format": "{\"request_id\":\"$context.requestId\",\"method\":\"$context.httpMethod\",\"route_key\":\"$context.routeKey\",\"path\":\"$context.path\",\"status\":\"$context.status\",\"response_length\":\"$context.responseLength\",\"response_latency\":\"$context.responseLatency\",\"source_ip\":\"$context.identity.sourceIp\"}"
+        }
+      }
+    },
+    "ApiGatewayInvokePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Ref": "ApiLambdaFunction"
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Sub": [
+            "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*",
+            {
+              "ApiId": {
+                "Ref": "SupportHttpApi"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "SupportJobsDeadLetterQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": {
+          "Fn::Sub": "ai-customer-support-jobs-dlq-${EnvironmentName}"
+        }
+      }
+    },
+    "SupportJobsQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": {
+          "Fn::Sub": "ai-customer-support-jobs-${EnvironmentName}"
+        },
+        "VisibilityTimeout": 60,
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "SupportJobsDeadLetterQueue",
+              "Arn"
+            ]
+          },
+          "maxReceiveCount": 5
+        }
+      }
+    },
+    "WorkerLambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowLambdaToAssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "ConsumeSupportJobsQueue",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "AllowConsumingSupportJobs",
+                  "Effect": "Allow",
+                  "Action": [
+                    "sqs:ReceiveMessage",
+                    "sqs:DeleteMessage",
+                    "sqs:GetQueueAttributes"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "SupportJobsQueue",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "PolicyName": "CommunicationWithBedrock",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "AllowInvokeSupportAgentRuntime",
+                  "Effect": "Allow",
+                  "Action": [
+                    "bedrock-agentcore:InvokeAgentRuntime"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "SupportAgentRuntime",
+                        "AgentRuntimeArn"
+                      ]
+                    },
+                    {
+                      "Fn::Sub": [
+                        "${RuntimeArn}/runtime-endpoint/DEFAULT",
+                        {
+                          "RuntimeArn": {
+                            "Fn::GetAtt": [
+                              "SupportAgentRuntime",
+                              "AgentRuntimeArn"
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": {
+              "Ref": "EnvironmentName"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ai-customer-support-agent"
+          }
+        ]
+      }
+    },
+    "SupportJobsWorkerLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": [
+        "WorkerLambdaLogGroup"
+      ],
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "ai-customer-support-worker-${EnvironmentName}"
+        },
+        "Description": "Processes support jobs pulled from SQS.",
+        "Runtime": "python3.14",
+        "Handler": "functions.worker.handler.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "WorkerLambdaExecutionRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": "squad-prep-artifacts-214078205303-us-east-1",
+          "S3Key": "ai-customer-support-agent/dev/0128d6b387b21cb1d78a9a90eee03882"
+        },
+        "MemorySize": 128,
+        "Timeout": 30,
+        "Environment": {
+          "Variables": {
+            "APP_ENV": {
+              "Ref": "EnvironmentName"
+            },
+            "SERVICE_NAME": "ai-customer-support-worker",
+            "LOG_LEVEL": "INFO",
+            "SUPPORT_JOBS_QUEUE_URL": {
+              "Ref": "SupportJobsQueue"
+            },
+            "BEDROCK_MODEL_ID": "amazon.nova-micro-v1:0",
+            "KNOWLEDGE_BASE_ID": {
+              "Ref": "SupportKnowledgeBase"
+            },
+            "AGENTCORE_RUNTIME_ARN": {
+              "Fn::GetAtt": [
+                "SupportAgentRuntime",
+                "AgentRuntimeArn"
+              ]
+            },
+            "AGENTCORE_MEMORY_ID": {
+              "Fn::GetAtt": [
+                "SupportAgentMemory",
+                "MemoryId"
+              ]
+            }
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": {
+              "Ref": "EnvironmentName"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ai-customer-support-agent"
+          }
+        ]
+      }
+    },
+    "WorkerLambdaLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/ai-customer-support-worker-${EnvironmentName}"
+        },
+        "RetentionInDays": 14
+      }
+    },
+    "SupportJobsEventSourceMapping": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "Properties": {
+        "EventSourceArn": {
+          "Fn::GetAtt": [
+            "SupportJobsQueue",
+            "Arn"
+          ]
+        },
+        "FunctionName": {
+          "Ref": "SupportJobsWorkerLambdaFunction"
+        },
+        "Enabled": true,
+        "BatchSize": 5,
+        "FunctionResponseTypes": [
+          "ReportBatchItemFailures"
+        ]
+      }
+    },
+    "KnowledgeBaseSourceBucket": {
+      "Type": "AWS::S3::Bucket"
+    },
+    "KnowledgeBaseVectorBucket": {
+      "Type": "AWS::S3Vectors::VectorBucket",
+      "Properties": {
+        "VectorBucketName": {
+          "Fn::Sub": "squad-prep-ai-customer-support-knowledge-base-vectors-${EnvironmentName}"
+        }
+      }
+    },
+    "KnowledgeBaseVectorIndex": {
+      "Type": "AWS::S3Vectors::Index",
+      "Properties": {
+        "VectorBucketArn": {
+          "Ref": "KnowledgeBaseVectorBucket"
+        },
+        "IndexName": "knowledge-base-index",
+        "DataType": "float32",
+        "Dimension": 1024,
+        "DistanceMetric": "cosine"
+      }
+    },
+    "KnowledgeBaseServiceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "bedrock.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "IngestDocsForRAG",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "AllowListSourceBucket",
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:ListBucket"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "KnowledgeBaseSourceBucket",
+                      "Arn"
+                    ]
+                  }
+                },
+                {
+                  "Sid": "AllowReadFromSourceBucket",
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "${KnowledgeBaseSourceBucket.Arn}/*"
+                  }
+                },
+                {
+                  "Sid": "AllowInvokeEmbeddingModel",
+                  "Effect": "Allow",
+                  "Action": [
+                    "bedrock:InvokeModel"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.titan-embed-text-v2:0"
+                  }
+                },
+                {
+                  "Sid": "AllowAccessToVectorIndex",
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3vectors:PutVectors",
+                    "s3vectors:GetVectors",
+                    "s3vectors:DeleteVectors",
+                    "s3vectors:QueryVectors",
+                    "s3vectors:GetIndex"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "KnowledgeBaseVectorIndex",
+                      "IndexArn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": {
+              "Ref": "EnvironmentName"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ai-customer-support-agent"
+          }
+        ]
+      }
+    },
+    "SupportKnowledgeBase": {
+      "Type": "AWS::Bedrock::KnowledgeBase",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "ai-customer-support-knowledge-base-${EnvironmentName}"
+        },
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "KnowledgeBaseServiceRole",
+            "Arn"
+          ]
+        },
+        "KnowledgeBaseConfiguration": {
+          "Type": "VECTOR",
+          "VectorKnowledgeBaseConfiguration": {
+            "EmbeddingModelArn": {
+              "Fn::Sub": "arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.titan-embed-text-v2:0"
+            }
+          }
+        },
+        "StorageConfiguration": {
+          "Type": "S3_VECTORS",
+          "S3VectorsConfiguration": {
+            "IndexArn": {
+              "Fn::GetAtt": [
+                "KnowledgeBaseVectorIndex",
+                "IndexArn"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "SupportKnowledgeBaseDataSource": {
+      "Type": "AWS::Bedrock::DataSource",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "ai-customer-support-knowledge-base-data-source-${EnvironmentName}"
+        },
+        "KnowledgeBaseId": {
+          "Ref": "SupportKnowledgeBase"
+        },
+        "DataDeletionPolicy": "DELETE",
+        "DataSourceConfiguration": {
+          "Type": "S3",
+          "S3Configuration": {
+            "BucketArn": {
+              "Fn::GetAtt": [
+                "KnowledgeBaseSourceBucket",
+                "Arn"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "AgentCoreExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowAgentCoreToAssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "bedrock-agentcore.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                },
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "AgentRuntimePermissions",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "AllowBedrockInference",
+                  "Effect": "Allow",
+                  "Action": [
+                    "bedrock:InvokeModel"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/amazon.nova-micro-v1:0"
+                  }
+                },
+                {
+                  "Sid": "AllowKnowledgeBaseRetrieval",
+                  "Effect": "Allow",
+                  "Action": [
+                    "bedrock:Retrieve"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "SupportKnowledgeBase",
+                      "KnowledgeBaseArn"
+                    ]
+                  }
+                },
+                {
+                  "Sid": "AllowReadAgentRuntimeArtifact",
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "${AgentCoreCodeBucket.Arn}/*"
+                  }
+                },
+                {
+                  "Sid": "AllowAgentCoreCreateLogGroups",
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*"
+                    }
+                  ]
+                },
+                {
+                  "Sid": "AllowAgentCoreDescribeLogGroups",
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:DescribeLogGroups"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
+                    }
+                  ]
+                },
+                {
+                  "Sid": "AllowAgentCoreWriteLogs",
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*"
+                    }
+                  ]
+                },
+                {
+                  "Sid": "AllowAgentCoreXRay",
+                  "Effect": "Allow",
+                  "Action": [
+                    "xray:PutTraceSegments",
+                    "xray:PutTelemetryRecords",
+                    "xray:GetSamplingRules",
+                    "xray:GetSamplingTargets"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "AllowAgentCoreMetrics",
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudwatch:PutMetricData"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "cloudwatch:namespace": "bedrock-agentcore"
+                    }
+                  }
+                },
+                {
+                  "Sid": "AllowAgentCoreShortTermMemory",
+                  "Effect": "Allow",
+                  "Action": [
+                    "bedrock-agentcore:CreateEvent",
+                    "bedrock-agentcore:ListEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "SupportAgentMemory",
+                        "MemoryArn"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": {
+              "Ref": "EnvironmentName"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ai-customer-support-agent"
+          }
+        ]
+      }
+    },
+    "AgentCoreCodeBucket": {
+      "Type": "AWS::S3::Bucket"
+    },
+    "SupportAgentRuntime": {
+      "Type": "AWS::BedrockAgentCore::Runtime",
+      "Properties": {
+        "AgentRuntimeName": {
+          "Fn::Sub": "ai_customer_support_agent_${EnvironmentName}"
+        },
+        "Description": "Runtime for the AI Customer Support Agent",
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "AgentCoreExecutionRole",
+            "Arn"
+          ]
+        },
+        "AgentRuntimeArtifact": {
+          "CodeConfiguration": {
+            "Code": {
+              "S3": {
+                "Bucket": {
+                  "Ref": "AgentCoreCodeBucket"
+                },
+                "Prefix": "agentcore-runtime-v12.zip"
+              }
+            },
+            "Runtime": "PYTHON_3_14",
+            "EntryPoint": [
+              "agentcore_app.py"
+            ]
+          }
+        },
+        "NetworkConfiguration": {
+          "NetworkMode": "PUBLIC"
+        },
+        "EnvironmentVariables": {
+          "APP_ENV": {
+            "Ref": "EnvironmentName"
+          },
+          "SERVICE_NAME": "ai-customer-support-agentcore",
+          "LOG_LEVEL": "INFO",
+          "SUPPORT_JOBS_QUEUE_URL": {
+            "Ref": "SupportJobsQueue"
+          },
+          "BEDROCK_MODEL_ID": "amazon.nova-micro-v1:0",
+          "KNOWLEDGE_BASE_ID": {
+            "Ref": "SupportKnowledgeBase"
+          },
+          "AGENTCORE_MEMORY_ID": {
+            "Fn::GetAtt": [
+              "SupportAgentMemory",
+              "MemoryId"
+            ]
+          }
+        },
+        "Tags": {
+          "Environment": {
+            "Ref": "EnvironmentName"
+          },
+          "Project": "ai-customer-support-agent"
+        }
+      }
+    },
+    "SupportAgentMemory": {
+      "Type": "AWS::BedrockAgentCore::Memory",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "ai_customer_support_memory_${EnvironmentName}"
+        },
+        "Description": "Short-term conversational memory for the customer support agent",
+        "EventExpiryDuration": 30,
+        "Tags": {
+          "Environment": {
+            "Ref": "EnvironmentName"
+          },
+          "Project": "ai-customer-support-agent"
+        }
+      }
+    },
+    "AgentCoreGatewayExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "bedrock-agentcore.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "InvokeGatewayToolsLambda",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "lambda:InvokeFunction"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "GatewayToolsLambdaFunction",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "SupportToolsGateway": {
+      "Type": "AWS::BedrockAgentCore::Gateway",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "ai-customer-support-gateway-${EnvironmentName}"
+        },
+        "Description": "Gateway for customer support agent tools",
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "AgentCoreGatewayExecutionRole",
+            "Arn"
+          ]
+        },
+        "ProtocolType": "MCP",
+        "AuthorizerType": "NONE"
+      }
+    },
+    "GatewayToolsLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "ai-customer-support-gateway-tools-${EnvironmentName}"
+        },
+        "Runtime": "python3.14",
+        "Handler": "functions.gateway_tools.handler.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "GatewayToolsLambdaExecutionRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": "squad-prep-artifacts-214078205303-us-east-1",
+          "S3Key": "ai-customer-support-agent/dev/0128d6b387b21cb1d78a9a90eee03882"
+        }
+      }
+    },
+    "GatewayToolsLambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        ]
+      }
+    },
+    "SupportToolsGatewayTarget": {
+      "Type": "AWS::BedrockAgentCore::GatewayTarget",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "support-tools-${EnvironmentName}"
+        },
+        "GatewayIdentifier": {
+          "Fn::GetAtt": [
+            "SupportToolsGateway",
+            "GatewayIdentifier"
+          ]
+        },
+        "CredentialProviderConfigurations": [
+          {
+            "CredentialProviderType": "GATEWAY_IAM_ROLE"
+          }
+        ],
+        "TargetConfiguration": {
+          "Mcp": {
+            "Lambda": {
+              "LambdaArn": {
+                "Fn::GetAtt": [
+                  "GatewayToolsLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "ToolSchema": {
+                "InlinePayload": [
+                  {
+                    "Name": "get_order",
+                    "Description": "Get the current status of an order",
+                    "InputSchema": {
+                      "Type": "object",
+                      "Properties": {
+                        "order_id": {
+                          "Type": "string"
+                        }
+                      },
+                      "Required": [
+                        "order_id"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "LambdaFunctionName": {
+      "Description": "Nombre fisico de la funcion Lambda.",
+      "Value": {
+        "Ref": "ApiLambdaFunction"
+      }
+    },
+    "LambdaFunctionArn": {
+      "Description": "ARN de la funcion Lambda.",
+      "Value": {
+        "Fn::GetAtt": [
+          "ApiLambdaFunction",
+          "Arn"
+        ]
+      }
+    },
+    "LambdaExecutionRoleName": {
+      "Description": "Nombre del execution role.",
+      "Value": {
+        "Ref": "LambdaExecutionRole"
+      }
+    },
+    "LambdaExecutionRoleArn": {
+      "Description": "ARN del execution role.",
+      "Value": {
+        "Fn::GetAtt": [
+          "LambdaExecutionRole",
+          "Arn"
+        ]
+      }
+    },
+    "ApiId": {
+      "Description": "ID of the API Gateway HTTP API",
+      "Value": {
+        "Ref": "SupportHttpApi"
+      }
+    },
+    "ApiUrl": {
+      "Description": "Base URL of the API",
+      "Value": {
+        "Fn::Sub": "https://${SupportHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+      }
+    },
+    "HealthUrl": {
+      "Description": "Health endpoint URL",
+      "Value": {
+        "Fn::Sub": "https://${SupportHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/health"
+      }
+    },
+    "ChatUrl": {
+      "Description": "Chat endpoint URL",
+      "Value": {
+        "Fn::Sub": "https://${SupportHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/chat"
+      }
+    },
+    "SupportJobsQueueUrl": {
+      "Description": "Main Queue URL",
+      "Value": {
+        "Ref": "SupportJobsQueue"
+      }
+    },
+    "SupportJobsQueueArn": {
+      "Description": "Main Queue ARN",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportJobsQueue",
+          "Arn"
+        ]
+      }
+    },
+    "SupportJobsWorkerFunctionName": {
+      "Description": "Worker Lambda function name",
+      "Value": {
+        "Ref": "SupportJobsWorkerLambdaFunction"
+      }
+    },
+    "SupportJobsWorkerFunctionArn": {
+      "Description": "Worker Lambda function ARN",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportJobsWorkerLambdaFunction",
+          "Arn"
+        ]
+      }
+    },
+    "SupportJobsWorkerExecutionRoleName": {
+      "Description": "Worker Lambda execution role name",
+      "Value": {
+        "Ref": "WorkerLambdaExecutionRole"
+      }
+    },
+    "SupportJobsWorkerExecutionRoleArn": {
+      "Description": "Worker Lambda execution role ARN",
+      "Value": {
+        "Fn::GetAtt": [
+          "WorkerLambdaExecutionRole",
+          "Arn"
+        ]
+      }
+    },
+    "SupportJobsDeadLetterQueueUrl": {
+      "Description": "Dead queue URL",
+      "Value": {
+        "Ref": "SupportJobsDeadLetterQueue"
+      }
+    },
+    "SupportJobsDeadLetterQueueArn": {
+      "Description": "Dead queue ARN",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportJobsDeadLetterQueue",
+          "Arn"
+        ]
+      }
+    },
+    "KnowledgeBaseSourceBucketName": {
+      "Description": "S3 bucket containing the Knowledge Base source documents",
+      "Value": {
+        "Ref": "KnowledgeBaseSourceBucket"
+      }
+    },
+    "KnowledgeBaseId": {
+      "Description": "Bedrock Knowledge Base ID",
+      "Value": {
+        "Ref": "SupportKnowledgeBase"
+      }
+    },
+    "KnowledgeBaseDataSourceId": {
+      "Description": "Bedrock Knowledge Base data source ID",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportKnowledgeBaseDataSource",
+          "DataSourceId"
+        ]
+      }
+    },
+    "AgentCoreCodeBucketName": {
+      "Description": "S3 bucket for AgentCore runtime deployment artifacts",
+      "Value": {
+        "Ref": "AgentCoreCodeBucket"
+      }
+    },
+    "AgentCoreRuntimeId": {
+      "Description": "AgentCore Runtime ID",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportAgentRuntime",
+          "AgentRuntimeId"
+        ]
+      }
+    },
+    "AgentCoreRuntimeArn": {
+      "Description": "AgentCore Runtime ARN",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportAgentRuntime",
+          "AgentRuntimeArn"
+        ]
+      }
+    },
+    "AgentCoreMemoryId": {
+      "Description": "AgentCore Memory ID",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportAgentMemory",
+          "MemoryId"
+        ]
+      }
+    },
+    "AgentCoreMemoryArn": {
+      "Description": "AgentCore Memory ARN",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportAgentMemory",
+          "MemoryArn"
+        ]
+      }
+    },
+    "AgentCoreGatewayId": {
+      "Description": "AgentCore Gateway ID",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportToolsGateway",
+          "GatewayIdentifier"
+        ]
+      }
+    },
+    "AgentCoreGatewayUrl": {
+      "Description": "AgentCore Gateway URL",
+      "Value": {
+        "Fn::GetAtt": [
+          "SupportToolsGateway",
+          "GatewayUrl"
+        ]
+      }
+    }
+  }
+}
