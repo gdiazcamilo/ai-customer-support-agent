@@ -2,10 +2,11 @@
   "name": "cdk",
   "version": "0.1.0",
   "scripts": {
+    "cdk:app": "cd ../.. && tsc --project infrastructure/cdk/tsconfig.json && tsx infrastructure/cdk/bin/cdk.ts",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cd ../.. && cdk"
   },
   "devDependencies": {
     "@swc/core": "^1.15.0",

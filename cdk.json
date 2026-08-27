@@ -1,19 +1,11 @@
 {
-  "app": "npx tsc && npx tsx bin/cdk.ts",
+  "app": "npm --prefix infrastructure/cdk run cdk:app",
   "watch": {
     "include": [
-      "**"
-    ],
-    "exclude": [
-      "README.md",
-      "cdk*.json",
-      "**/*.d.ts",
-      "**/*.js",
-      "tsconfig.json",
-      "package*.json",
-      "yarn.lock",
-      "node_modules",
-      "test"
+      "src/**",
+      "infrastructure/cdk/bin/**",
+      "infrastructure/cdk/lib/**",
+      "requirements.txt"
     ]
   },
   "context": {

@@ -10,6 +10,8 @@ dist/
 *.zip
 .build/
 
+cdk.out/
+
 infrastructure/packaged-template.yaml
 
 # AWS SAM, por si se usa posteriormente

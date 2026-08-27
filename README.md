@@ -125,6 +125,27 @@ ruff check .
 black --check .
 ```
 
+## AWS CDK
+
+Install the CDK app dependencies:
+
+```bash
+npm --prefix infrastructure/cdk install
+```
+
+Run CDK commands from the repository root:
+
+```bash
+cdk synth
+cdk diff
+cdk deploy
+cdk watch
+```
+
+`cdk watch` monitors the application code in `src/`, the CDK app in
+`infrastructure/cdk/bin/` and `infrastructure/cdk/lib/`, and
+`requirements.txt`.
+
 ## Local Agent Scripts
 
 Run a direct agent question:
