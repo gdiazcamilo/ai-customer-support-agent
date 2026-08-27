@@ -1,3 +1,4 @@
+import * as logs from 'aws-cdk-lib/aws-logs'
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as agentcore from 'aws-cdk-lib/aws-bedrockagentcore';
@@ -125,6 +126,9 @@ export class AgentCore extends Construct {
                 runtime: lambda.Runtime.PYTHON_3_14,
                 handler: 'functions.gateway_tools.handler.handler',
                 code: lambda.Code.fromAsset(path.join(__dirname, '../../../../src')),
+                logGroup: new logs.LogGroup(this, 'LogGroup', {
+                    retention: logs.RetentionDays.TWO_WEEKS
+                })
             },
         );
 

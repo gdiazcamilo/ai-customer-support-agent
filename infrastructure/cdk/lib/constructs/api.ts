@@ -13,6 +13,8 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 
 
 export class Api extends Construct {
+    public readonly httpApi: apigwv2.HttpApi;
+
     constructor(scope: Construct, id: string, props: {
         jobsQueue: sqs.IQueue
         agentRuntime: agentcore.Runtime
@@ -50,7 +52,7 @@ export class Api extends Construct {
 
         const apiIntegration = new HttpLambdaIntegration('LambdaIntegration', lambdaFunction);
 
-        const httpApi = new apigwv2.HttpApi(this, 'HttpApi',
+        this.httpApi = new apigwv2.HttpApi(this, 'HttpApi',
             {
                 apiName: `ai-customer-support-agent-api-cdk-${props.environmentName}`,
                 description: 'HTTP Api for the AI Customer Support Agent',
@@ -65,8 +67,9 @@ export class Api extends Construct {
             retention: logs.RetentionDays.TWO_WEEKS,
         });
 
+
         new apigwv2.HttpStage(this, 'DefaultStage', {
-            httpApi,
+            httpApi: this.httpApi,
             stageName: '$default',
             autoDeploy: true,
             accessLogSettings: {
@@ -77,13 +80,13 @@ export class Api extends Construct {
             },
         });
 
-        httpApi.addRoutes({
+        this.httpApi.addRoutes({
             path: '/health',
             methods: [apigwv2.HttpMethod.GET],
             integration: apiIntegration,
         });
 
-        httpApi.addRoutes({
+        this.httpApi.addRoutes({
             path: '/chat',
             methods: [apigwv2.HttpMethod.POST],
             integration: apiIntegration,
@@ -91,7 +94,8 @@ export class Api extends Construct {
 
         new cdk.CfnOutput(this, 'ApiUrl',
             {
-                value: httpApi.apiEndpoint
+                key: "ApiUrl",
+                value: this.httpApi.apiEndpoint
             }
         );
     }

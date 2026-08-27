@@ -16,8 +16,11 @@ export interface CustomerSupportAgentStackProps extends cdk.StackProps {
 export class CustomerSupportAgentCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CustomerSupportAgentStackProps) {
     super(scope, id, props);
-
     const environmentName = props.environmentName;
+
+    cdk.Tags.of(this).add('Project', 'ai-customer-support-agent');
+    cdk.Tags.of(this).add('Environment', environmentName);
+    cdk.Tags.of(this).add('ManagedBy', 'CDK');
 
     const jobsQueue = new JobsQueue(this, "JobsInfrastructure", {
       environmentName
