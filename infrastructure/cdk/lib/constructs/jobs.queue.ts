@@ -6,15 +6,17 @@ export class JobsQueue extends Construct {
     public readonly queue: sqs.Queue;
     public readonly deadLetterQueue: sqs.Queue;
 
-    constructor(scope: Construct, id: string) {
+    constructor(scope: Construct, id: string, props: {
+        environmentName: string
+    }) {
         super(scope, id);
 
         this.deadLetterQueue = new sqs.Queue(this, 'DeadLetterQueue', {
-            queueName: 'ai-customer-support-jobs-dlq-cdk-dev',
+            queueName: `ai-customer-support-jobs-dlq-cdk-${props.environmentName}`,
         });
 
         this.queue = new sqs.Queue(this, 'Queue', {
-            queueName: 'ai-customer-support-jobs-cdk-dev',
+            queueName: `ai-customer-support-jobs-cdk-${props.environmentName}`,
             visibilityTimeout: Duration.seconds(60),
             deadLetterQueue: {
                 queue: this.deadLetterQueue,

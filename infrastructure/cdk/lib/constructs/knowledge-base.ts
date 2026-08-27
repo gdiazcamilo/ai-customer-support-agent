@@ -9,7 +9,9 @@ export class KnowledgeBase extends Construct {
     public readonly knowledgeBase: bedrock.CfnKnowledgeBase;
     // public readonly sourceBucket: s3.Bucket;
 
-    constructor(scope: Construct, id: string) {
+    constructor(scope: Construct, id: string, props: {
+        environmentName: string
+    }) {
         super(scope, id);
 
         const sourceBucket = new s3.Bucket(this, 'SourceBucket');
@@ -17,7 +19,7 @@ export class KnowledgeBase extends Construct {
         const vectorBucket = new s3vectors.CfnVectorBucket(this, 'VectorBucket',
             {
                 vectorBucketName:
-                    'squad-prep-ai-customer-support-knowledge-base-vectors-cdk-dev',
+                    `squad-prep-ai-customer-support-knowledge-base-vectors-cdk-${props.environmentName}`,
             },
         );
 
@@ -71,7 +73,7 @@ export class KnowledgeBase extends Construct {
             this,
             'KnowledgeBase',
             {
-                name: 'ai-customer-support-knowledge-base-cdk-dev',
+                name: `ai-customer-support-knowledge-base-cdk-${props.environmentName}`,
                 roleArn: serviceRole.roleArn,
                 knowledgeBaseConfiguration: {
                     type: 'VECTOR',
@@ -92,7 +94,7 @@ export class KnowledgeBase extends Construct {
 
         new bedrock.CfnDataSource(this, 'DataSource',
             {
-                name: 'ai-customer-support-knowledge-base-data-source-cdk-dev',
+                name: `ai-customer-support-knowledge-base-data-source-cdk-${props.environmentName}`,
                 knowledgeBaseId: this.knowledgeBase.attrKnowledgeBaseId,
                 dataDeletionPolicy: 'DELETE',
                 dataSourceConfiguration: {

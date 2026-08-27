@@ -16,12 +16,13 @@ export class Api extends Construct {
     constructor(scope: Construct, id: string, props: {
         jobsQueue: sqs.IQueue
         agentRuntime: agentcore.Runtime
+        environmentName: string
     }) {
         super(scope, id);
 
         const lambdaFunction = new lambda.Function(this, 'LambdaFunction',
             {
-                functionName: 'ai-customer-support-agent-cdk-dev',
+                functionName: `ai-customer-support-agent-cdk-${props.environmentName}`,
                 description: 'API for the AI Customer Support Agent',
                 runtime: lambda.Runtime.PYTHON_3_14,
                 code: lambda.Code.fromAsset(path.join(__dirname, '../../../../src')),
@@ -29,11 +30,11 @@ export class Api extends Construct {
                 memorySize: 128,
                 timeout: cdk.Duration.seconds(30),
                 logGroup: new logs.LogGroup(this, 'LogGroup', {
-                    logGroupName: '/aws/lambda/ai-customer-support-agent-cdk-dev',
+                    logGroupName: `/aws/lambda/ai-customer-support-agent-cdk-${props.environmentName}`,
                     retention: logs.RetentionDays.TWO_WEEKS
                 }),
                 environment: {
-                    APP_ENV: 'dev',
+                    APP_ENV: `${props.environmentName}`,
                     SERVICE_NAME: 'ai-customer-support-agent',
                     LOG_LEVEL: 'INFO',
                     SUPPORT_JOBS_QUEUE_URL: props.jobsQueue.queueUrl,
@@ -51,7 +52,7 @@ export class Api extends Construct {
 
         const httpApi = new apigwv2.HttpApi(this, 'HttpApi',
             {
-                apiName: 'ai-customer-support-agent-api-cdk-dev',
+                apiName: `ai-customer-support-agent-api-cdk-${props.environmentName}`,
                 description: 'HTTP Api for the AI Customer Support Agent',
                 defaultIntegration: apiIntegration,
                 createDefaultStage: false,
@@ -60,7 +61,7 @@ export class Api extends Construct {
 
 
         const apiAccessLogGroup = new logs.LogGroup(this, 'GatewayAccessLogGroup', {
-            logGroupName: '/aws/apigateway/ai-customer-support-agent-cdk-dev',
+            logGroupName: `/aws/apigateway/ai-customer-support-agent-cdk-${props.environmentName}`,
             retention: logs.RetentionDays.TWO_WEEKS,
         });
 

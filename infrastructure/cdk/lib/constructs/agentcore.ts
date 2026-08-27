@@ -9,6 +9,7 @@ import { Construct } from "constructs";
 
 export interface AgentCoreProps {
     knowledgeBase: bedrock.CfnKnowledgeBase;
+    environmentName: string
 }
 
 
@@ -18,7 +19,6 @@ export class AgentCore extends Construct {
 
     constructor(scope: Construct, id: string, props: AgentCoreProps) {
         super(scope, id);
-
 
         this.memory = new agentcore.Memory(this, 'Memory',
             {
@@ -120,7 +120,7 @@ export class AgentCore extends Construct {
 
         const gatewayToolsFunction = new lambda.Function(this, 'ToolsGatewayLambdaFunction',
             {
-                functionName: 'ai-customer-support-gateway-tools-cdk-dev',
+                functionName: `ai-customer-support-gateway-tools-cdk-${props.environmentName}`,
                 description: 'Lamba Function for the agent to use tools ',
                 runtime: lambda.Runtime.PYTHON_3_14,
                 handler: 'functions.gateway_tools.handler.handler',
@@ -130,7 +130,7 @@ export class AgentCore extends Construct {
 
         const toolsGateway = new agentcore.Gateway(this, 'ToolsGateway',
             {
-                gatewayName: 'ai-customer-support-gateway-cdk-dev',
+                gatewayName: `ai-customer-support-gateway-cdk-${props.environmentName}`,
                 description: 'Gateway for customer support agent tools',
                 authorizerConfiguration:
                     agentcore.GatewayAuthorizer.withNoAuth(),
@@ -156,7 +156,7 @@ export class AgentCore extends Construct {
         agentcore.GatewayTarget.forLambda(this, 'ToolsGatewayTarget',
             {
                 gateway: toolsGateway,
-                gatewayTargetName: 'support-tools-cdk-dev',
+                gatewayTargetName: `support-tools-cdk-${props.environmentName}`,
                 lambdaFunction: gatewayToolsFunction,
                 toolSchema,
             },
