@@ -1,7 +1,6 @@
 import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
-import * as cdk from 'aws-cdk-lib';
 
 export class JobsQueue extends Construct {
     public readonly queue: sqs.IQueue;

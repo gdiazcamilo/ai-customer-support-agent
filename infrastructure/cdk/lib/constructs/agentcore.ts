@@ -78,7 +78,7 @@ export class AgentCore extends Construct {
                 agentRuntimeArtifact,
 
                 environmentVariables: {
-                    APP_ENV: 'dev',
+                    APP_ENV: props.environmentName,
                     SERVICE_NAME: 'ai-customer-support-agentcore',
                     LOG_LEVEL: 'INFO',
                     SUPPORT_JOBS_QUEUE_URL: 'REFACTOR_NEEDED',
