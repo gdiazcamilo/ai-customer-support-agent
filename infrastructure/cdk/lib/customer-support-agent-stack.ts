@@ -26,10 +26,6 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
       environmentName
     });
 
-    new cdk.CfnOutput(this, "QueueUrl", {
-      value: jobsQueue.queue.queueUrl
-    });
-
     const knowledge = new KnowledgeBase(this, 'KnowledgeBase', {
       environmentName
     });
@@ -53,7 +49,37 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
       environmentName
     });
 
+    new cdk.CfnOutput(this, "QueueUrl", {
+      value: jobsQueue.queue.queueUrl
+    });
 
+    new cdk.CfnOutput(this, "DeadLetterQueue", {
+      value: jobsQueue.deadLetterQueue.queueUrl
+    });
+
+    new cdk.CfnOutput(this, "ApiGatewayUrl", {
+      value: api.httpApi.apiEndpoint
+    });
+
+    new cdk.CfnOutput(this, "ApiLambdaFunction", {
+      value: api.lambda.functionArn
+    });
+
+    new cdk.CfnOutput(this, "WorkerLambdaFunction", {
+      value: worker.lambda.functionArn
+    });
+
+    new cdk.CfnOutput(this, "KnowledgeBaseId", {
+      value: knowledge.knowledgeBase.attrKnowledgeBaseId
+    });
+
+    new cdk.CfnOutput(this, "AgentRuntimeArn", {
+      value: agent.runtime.agentRuntimeArn
+    });
+
+    new cdk.CfnOutput(this, "AgentMemoryId", {
+      value: agent.memory.memoryId
+    });
 
 
   }
