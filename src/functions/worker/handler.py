@@ -5,16 +5,14 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from functions.api.logging_utils import log_event
-from services.agent import run_agent
+from functions.worker.config import WORKER_SETTINGS
 from services.agentcore import invoke_agent
 
 if TYPE_CHECKING:
     from aws_lambda_typing.events import SQSEvent
     from aws_lambda_typing.events.sqs import SQSMessage
-from functions.api.config import SETTINGS
-
 logger = logging.getLogger()
-logger.setLevel(SETTINGS.log_level)
+logger.setLevel(WORKER_SETTINGS.log_level)
 
 
 def handler(event: SQSEvent, context: Any) -> dict:
@@ -38,9 +36,7 @@ def handler(event: SQSEvent, context: Any) -> dict:
             request_id = body.get("request_id")
 
             process_record(record)
-        except (
-            Exception
-        ) as exc:  # noqa: BLE001 - SQS batch failures must be isolated per record.
+        except Exception as exc:  # noqa: BLE001 - isolate SQS record failures.
             log_event(
                 logger,
                 logging.ERROR,

@@ -5,11 +5,11 @@ import time
 
 import boto3
 
-from functions.api.config import SETTINGS
+from agentcore_config import AGENTCORE_SETTINGS
 from functions.api.logging_utils import log_event
 
 logger = logging.getLogger()
-logger.setLevel(SETTINGS.log_level)
+logger.setLevel(AGENTCORE_SETTINGS.log_level)
 
 bedrock_agent_runtime = boto3.client("bedrock-agent-runtime")
 
@@ -24,7 +24,7 @@ def retrieve_knowledge(
         logging.INFO,
         "knowledge_retrieval_started",
         request_id=request_id,
-        knowledge_base_id=SETTINGS.knowledge_base_id,
+        knowledge_base_id=AGENTCORE_SETTINGS.knowledge_base_id,
         number_of_results=number_of_results,
         query_length=len(query),
     )
@@ -32,7 +32,7 @@ def retrieve_knowledge(
     started_at = time.perf_counter()
 
     response = bedrock_agent_runtime.retrieve(
-        knowledgeBaseId=SETTINGS.knowledge_base_id,
+        knowledgeBaseId=AGENTCORE_SETTINGS.knowledge_base_id,
         retrievalQuery={
             "text": query,
         },
@@ -65,7 +65,7 @@ def retrieve_knowledge(
         logging.INFO,
         "knowledge_retrieval_completed",
         request_id=request_id,
-        knowledge_base_id=SETTINGS.knowledge_base_id,
+        knowledge_base_id=AGENTCORE_SETTINGS.knowledge_base_id,
         result_count=len(results),
         top_score=results[0]["score"] if results else None,
         sources=[result["source"] for result in results if result["source"]],

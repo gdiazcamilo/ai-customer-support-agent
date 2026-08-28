@@ -4,13 +4,13 @@ from typing import Any
 
 import boto3
 
-from functions.api.config import SETTINGS
+from functions.api.config import API_SETTINGS
 from functions.api.logging_utils import log_event
 from functions.api.responses import error_response
 from functions.api.router import route_request
 
 logger = logging.getLogger()
-logger.setLevel(SETTINGS.log_level)
+logger.setLevel(API_SETTINGS.log_level)
 
 
 @dataclass(frozen=True)

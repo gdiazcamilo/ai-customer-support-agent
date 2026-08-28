@@ -81,7 +81,6 @@ export class AgentCore extends Construct {
                     APP_ENV: props.environmentName,
                     SERVICE_NAME: 'ai-customer-support-agentcore',
                     LOG_LEVEL: 'INFO',
-                    SUPPORT_JOBS_QUEUE_URL: 'REFACTOR_NEEDED',
                     BEDROCK_MODEL_ID: 'amazon.nova-micro-v1:0',
                     KNOWLEDGE_BASE_ID: props.knowledgeBase.attrKnowledgeBaseId,
                     AGENTCORE_MEMORY_ID: this.memory.memoryId,

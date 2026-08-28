@@ -7,7 +7,7 @@ from typing import Any
 
 import boto3
 
-from functions.api.config import SETTINGS
+from agentcore_config import AGENTCORE_SETTINGS
 from functions.api.logging_utils import log_event
 from tools.executor import (
     InvalidToolInputError,
@@ -19,7 +19,7 @@ from tools.registry import BEDROCK_TOOLS
 
 logger = logging.getLogger()
 
-logger.setLevel(SETTINGS.log_level)
+logger.setLevel(AGENTCORE_SETTINGS.log_level)
 
 bedrock_runtime = boto3.client("bedrock-runtime")
 
@@ -75,7 +75,7 @@ def run_agent(
         logging.INFO,
         "agent_started",
         request_id=request_id,
-        model_id=SETTINGS.bedrock_model_id,
+        model_id=AGENTCORE_SETTINGS.bedrock_model_id,
     )
 
     messages: list[dict[str, Any]] = list(conversation_history or [])
@@ -93,7 +93,7 @@ def run_agent(
 
     for iteration in range(1, MAX_AGENT_ITERATIONS + 1):
         response = bedrock_runtime.converse(
-            modelId=SETTINGS.bedrock_model_id,
+            modelId=AGENTCORE_SETTINGS.bedrock_model_id,
             system=[
                 {
                     "text": SYSTEM_PROMPT,
@@ -118,7 +118,7 @@ def run_agent(
             "agent_iteration_completed",
             request_id=request_id,
             iteration=iteration,
-            model_id=SETTINGS.bedrock_model_id,
+            model_id=AGENTCORE_SETTINGS.bedrock_model_id,
             stop_reason=response["stopReason"],
             input_tokens=usage["inputTokens"],
             output_tokens=usage["outputTokens"],

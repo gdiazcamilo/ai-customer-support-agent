@@ -3,13 +3,13 @@ import logging
 
 import boto3
 
-from functions.api.config import SETTINGS
+from functions.api.config import API_SETTINGS
 from functions.api.logging_utils import log_event
 
 STATIC_CHAT_RESPONSE = "The support agent is not connected to AI yet."
 
 logger = logging.getLogger()
-logger.setLevel(SETTINGS.log_level)
+logger.setLevel(API_SETTINGS.log_level)
 
 sqs_client = boto3.client("sqs")
 
@@ -34,7 +34,7 @@ def process_chat(message: str, request_id: str) -> dict:
     }
 
     response = sqs_client.send_message(
-        QueueUrl=SETTINGS.support_jobs_queue_url,
+        QueueUrl=API_SETTINGS.support_jobs_queue_url,
         MessageBody=json.dumps(job),
     )
 

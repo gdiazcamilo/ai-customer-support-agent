@@ -5,7 +5,7 @@ from typing import Any
 
 import boto3
 
-from functions.api.config import SETTINGS
+from agentcore_config import AGENTCORE_SETTINGS
 
 memory_client = boto3.client("bedrock-agentcore")
 
@@ -18,7 +18,7 @@ def save_message(
     text: str,
 ) -> None:
     memory_client.create_event(
-        memoryId=SETTINGS.agentcore_memory_id,
+        memoryId=AGENTCORE_SETTINGS.memory_id,
         actorId=actor_id,
         sessionId=conversation_id,
         eventTimestamp=datetime.now(timezone.utc),
@@ -42,7 +42,7 @@ def load_conversation(
     conversation_id: str,
 ) -> list[dict[str, Any]]:
     response = memory_client.list_events(
-        memoryId=SETTINGS.agentcore_memory_id,
+        memoryId=AGENTCORE_SETTINGS.memory_id,
         actorId=actor_id,
         sessionId=conversation_id,
         includePayloads=True,

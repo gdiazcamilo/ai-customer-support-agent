@@ -1,39 +1,36 @@
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Settings:
+class ApiSettings:
     service_name: str
     environment: str
     log_level: str
     support_jobs_queue_url: str
-    bedrock_model_id: str
-    knowledge_base_id: str
-    agentcore_memory_id: str
-    agentcore_runtime_arn: str | None
 
 
-def load_settings() -> Settings:
-    return Settings(
-        service_name=os.environ.get(
+def load_api_settings(
+    environ: Mapping[str, str] | None = None,
+) -> ApiSettings:
+    values = os.environ if environ is None else environ
+
+    return ApiSettings(
+        service_name=values.get(
             "SERVICE_NAME",
             "ai-customer-support-agent",
         ),
-        environment=os.environ.get(
+        environment=values.get(
             "APP_ENV",
             "dev",
         ),
-        log_level=os.environ.get(
+        log_level=values.get(
             "LOG_LEVEL",
             "INFO",
         ),
-        support_jobs_queue_url=os.environ["SUPPORT_JOBS_QUEUE_URL"],
-        bedrock_model_id=os.environ["BEDROCK_MODEL_ID"],
-        knowledge_base_id=os.environ["KNOWLEDGE_BASE_ID"],
-        agentcore_runtime_arn=os.environ.get("AGENTCORE_RUNTIME_ARN"),
-        agentcore_memory_id=os.environ["AGENTCORE_MEMORY_ID"],
+        support_jobs_queue_url=values["SUPPORT_JOBS_QUEUE_URL"],
     )
 
 
-SETTINGS = load_settings()
+API_SETTINGS = load_api_settings()

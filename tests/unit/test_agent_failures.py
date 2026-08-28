@@ -1,5 +1,3 @@
-from unittest.mock import Mock
-
 import pytest
 
 from services.agent import (
@@ -17,12 +15,13 @@ def test_unknown_tool_is_returned_as_tool_error():
         "input": {},
     }
 
-    result = execute_tool_request(
+    result, sources = execute_tool_request(
         tool_use,
         request_id="request-test-1",
         execution_context=ToolExecutionContext(),
     )
 
+    assert sources == []
     assert result["toolUseId"] == "tool-test-1"
     assert result["status"] == "error"
     assert "unknown tool" in result["content"][0]["text"].lower()
@@ -37,12 +36,13 @@ def test_invalid_tool_input_is_returned_as_tool_error():
         },
     }
 
-    result = execute_tool_request(
+    result, sources = execute_tool_request(
         tool_use,
         request_id="request-test-2",
         execution_context=ToolExecutionContext(),
     )
 
+    assert sources == []
     assert result["toolUseId"] == "tool-test-2"
     assert result["status"] == "error"
     assert "order_id" in result["content"][0]["text"]

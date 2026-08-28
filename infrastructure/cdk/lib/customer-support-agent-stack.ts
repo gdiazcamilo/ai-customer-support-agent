@@ -37,15 +37,12 @@ export class CustomerSupportAgentCdkStack extends cdk.Stack {
 
     const api = new Api(this, 'Api', {
       jobsQueue: jobsQueue.queue,
-      agentRuntime: agent.runtime,
       environmentName
     });
 
     const worker = new Worker(this, 'Worker', {
       queue: jobsQueue.queue,
-      knowledgeBase: knowledge.knowledgeBase,
       agentRuntime: agent.runtime,
-      agentMemory: agent.memory,
       environmentName
     });
 

@@ -7,13 +7,13 @@ from dataclasses import dataclass
 
 import boto3
 
-from functions.api.config import SETTINGS
 from functions.api.logging_utils import log_event
+from functions.worker.config import WORKER_SETTINGS
 
 agentcore_runtime = boto3.client("bedrock-agentcore")
 
 logger = logging.getLogger()
-logger.setLevel(SETTINGS.log_level)
+logger.setLevel(WORKER_SETTINGS.log_level)
 
 
 @dataclass
@@ -29,11 +29,6 @@ def invoke_agent(
     request_id: str | None = None,
     conversation_id: str | None = None,
 ) -> AgentCoreResult:
-    if not SETTINGS.agentcore_runtime_arn:
-        raise RuntimeError(
-            "AGENTCORE_RUNTIME_ARN is required to invoke AgentCore Runtime"
-        )
-
     payload_data = {
         "prompt": message,
         "request_id": request_id,
@@ -54,7 +49,7 @@ def invoke_agent(
     started_at = time.perf_counter()
 
     response = agentcore_runtime.invoke_agent_runtime(
-        agentRuntimeArn=SETTINGS.agentcore_runtime_arn,
+        agentRuntimeArn=WORKER_SETTINGS.agentcore_runtime_arn,
         qualifier="DEFAULT",
         contentType="application/json",
         accept="application/json",

@@ -1,6 +1,4 @@
-import * as agentcore from 'aws-cdk-lib/aws-bedrockagentcore'
 import * as sqs from 'aws-cdk-lib/aws-sqs'
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from "aws-cdk-lib/core";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as path from 'path';
@@ -18,7 +16,6 @@ export class Api extends Construct {
 
     constructor(scope: Construct, id: string, props: {
         jobsQueue: sqs.IQueue
-        agentRuntime: agentcore.Runtime
         environmentName: string
     }) {
         super(scope, id);
@@ -41,10 +38,6 @@ export class Api extends Construct {
                     SERVICE_NAME: 'ai-customer-support-agent',
                     LOG_LEVEL: 'INFO',
                     SUPPORT_JOBS_QUEUE_URL: props.jobsQueue.queueUrl,
-                    BEDROCK_MODEL_ID: 'amazon.nova-micro-v1:0',
-                    KNOWLEDGE_BASE_ID: 'REFACTOR_NEEDED',
-                    AGENTCORE_RUNTIME_ARN: props.agentRuntime.agentRuntimeArn,
-                    AGENTCORE_MEMORY_ID: 'REFACTOR_NEEDED',
                 },
             }
         );

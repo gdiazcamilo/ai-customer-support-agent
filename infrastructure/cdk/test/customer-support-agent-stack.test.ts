@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib/core';
-import { Capture, Match, Template } from 'aws-cdk-lib/assertions';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 
 import { CustomerSupportAgentCdkStack } from '../lib/customer-support-agent-stack';
 
@@ -35,7 +35,10 @@ test('configures the API Lambda with the jobs queue URL', () => {
         {
             FunctionName: 'ai-customer-support-agent-cdk-dev',
             Environment: {
-                Variables: Match.objectLike({
+                Variables: Match.exact({
+                    APP_ENV: 'dev',
+                    SERVICE_NAME: 'ai-customer-support-agent',
+                    LOG_LEVEL: 'INFO',
                     SUPPORT_JOBS_QUEUE_URL: {
                         Ref: jobsQueueLogicalId,
                     },
@@ -137,7 +140,7 @@ test('exposes the health and chat routes', () => {
 });
 
 
-test('configures the worker with AgentCore runtime access', () => {
+test('configures the worker only with AgentCore runtime access', () => {
     const runtimes = template.findResources('AWS::BedrockAgentCore::Runtime');
     const runtimeLogicalId = Object.keys(runtimes)[0];
 
@@ -146,7 +149,10 @@ test('configures the worker with AgentCore runtime access', () => {
         {
             FunctionName: 'ai-customer-support-worker-cdk-dev',
             Environment: {
-                Variables: Match.objectLike({
+                Variables: Match.exact({
+                    APP_ENV: 'dev',
+                    SERVICE_NAME: 'ai-customer-support-worker',
+                    LOG_LEVEL: 'INFO',
                     AGENTCORE_RUNTIME_ARN: {
                         'Fn::GetAtt': [
                             runtimeLogicalId, 'AgentRuntimeArn'
@@ -158,46 +164,32 @@ test('configures the worker with AgentCore runtime access', () => {
     )
 });
 
-test('configures the worker with the Knowledge Base', () => {
-    const knowledgeBases = template.findResources(
-        'AWS::Bedrock::KnowledgeBase',
-    );
 
-    const knowledgeBaseLogicalId =
-        Object.keys(knowledgeBases)[0];
-
-    template.hasResourceProperties(
-        'AWS::Lambda::Function',
-        {
-            FunctionName:
-                'ai-customer-support-worker-cdk-dev',
-
-            Environment: {
-                Variables: Match.objectLike({
-                    KNOWLEDGE_BASE_ID: {
-                        'Fn::GetAtt': [
-                            knowledgeBaseLogicalId,
-                            'KnowledgeBaseId',
-                        ],
-                    },
-                }),
-            },
-        },
-    );
-});
-
-
-test('configures AgentCore Runtime with the agent memory', () => {
+test('configures AgentCore Runtime only with its service dependencies', () => {
     const memories = template.findResources(
         'AWS::BedrockAgentCore::Memory',
     );
-
     const memoryLogicalId = Object.keys(memories)[0];
+
+    const knowledgeBases = template.findResources(
+        'AWS::Bedrock::KnowledgeBase',
+    );
+    const knowledgeBaseLogicalId = Object.keys(knowledgeBases)[0];
 
     template.hasResourceProperties(
         'AWS::BedrockAgentCore::Runtime',
         {
-            EnvironmentVariables: Match.objectLike({
+            EnvironmentVariables: Match.exact({
+                APP_ENV: 'dev',
+                SERVICE_NAME: 'ai-customer-support-agentcore',
+                LOG_LEVEL: 'INFO',
+                BEDROCK_MODEL_ID: 'amazon.nova-micro-v1:0',
+                KNOWLEDGE_BASE_ID: {
+                    'Fn::GetAtt': [
+                        knowledgeBaseLogicalId,
+                        'KnowledgeBaseId',
+                    ],
+                },
                 AGENTCORE_MEMORY_ID: {
                     'Fn::GetAtt': [
                         memoryLogicalId,
@@ -208,5 +200,3 @@ test('configures AgentCore Runtime with the agent memory', () => {
         },
     );
 });
-
-

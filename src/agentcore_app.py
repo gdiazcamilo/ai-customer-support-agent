@@ -4,13 +4,8 @@ import logging
 import os
 from typing import Any
 
-# Local-development defaults.
-# In AgentCore Runtime these values come from EnvironmentVariables
-# defined in CloudFormation.
-os.environ.setdefault(
-    "SUPPORT_JOBS_QUEUE_URL",
-    "https://sqs.us-east-1.amazonaws.com/214078205303/ai-customer-support-jobs-dev",
-)
+# Local-development defaults. In AgentCore Runtime these values come from
+# EnvironmentVariables defined in CloudFormation.
 os.environ.setdefault(
     "BEDROCK_MODEL_ID",
     "amazon.nova-micro-v1:0",
@@ -25,16 +20,16 @@ os.environ.setdefault(
 )
 
 
-# These imports must happen after the local environment defaults above,
-# because SETTINGS is loaded at import time.
+# These imports must happen after the local environment defaults above because
+# the AgentCore runtime settings are loaded at import time.
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
-from functions.api.config import SETTINGS
+from agentcore_config import AGENTCORE_SETTINGS
 from services.agent import run_agent
 from services.memory import load_conversation, save_message
 
 logging.basicConfig(
-    level=SETTINGS.log_level,
+    level=AGENTCORE_SETTINGS.log_level,
     format="%(message)s",
 )
 

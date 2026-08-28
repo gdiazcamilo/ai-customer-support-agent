@@ -75,27 +75,18 @@ Validation and error response details are documented in `docs/api-contract.md`.
 
 ## Configuration
 
-The application reads configuration from environment variables at import time.
+Each independently deployed runtime loads only its own environment settings.
 
-Required:
-
-| Variable | Description |
-| --- | --- |
-| `SUPPORT_JOBS_QUEUE_URL` | SQS queue URL for support jobs |
-| `BEDROCK_MODEL_ID` | Bedrock model ID used by the local Converse agent |
-| `KNOWLEDGE_BASE_ID` | Bedrock knowledge base ID used for policy search |
-| `AGENTCORE_MEMORY_ID` | AgentCore memory ID for conversation history |
-
-Optional:
-
-| Variable | Default | Description |
+| Runtime | Required | Optional defaults |
 | --- | --- | --- |
-| `SERVICE_NAME` | `ai-customer-support-agent` | Service name returned by health checks and logs |
-| `APP_ENV` | `dev` | Runtime environment name |
-| `LOG_LEVEL` | `INFO` | Python logging level |
-| `AGENTCORE_RUNTIME_ARN` | unset | Required by the worker when invoking AgentCore Runtime |
+| API Lambda | `SUPPORT_JOBS_QUEUE_URL` | `SERVICE_NAME=ai-customer-support-agent`, `APP_ENV=dev`, `LOG_LEVEL=INFO` |
+| Worker Lambda | `AGENTCORE_RUNTIME_ARN` | `SERVICE_NAME=ai-customer-support-worker`, `APP_ENV=dev`, `LOG_LEVEL=INFO` |
+| AgentCore Runtime | `BEDROCK_MODEL_ID`, `KNOWLEDGE_BASE_ID`, `AGENTCORE_MEMORY_ID` | `SERVICE_NAME=ai-customer-support-agentcore`, `APP_ENV=dev`, `LOG_LEVEL=INFO` |
+| Gateway tools Lambda | None | None |
 
-`src/agentcore_app.py` sets local-development defaults for the required variables before loading settings.
+`src/agentcore_app.py` sets local-development defaults for its three required
+service identifiers before loading AgentCore Runtime settings. See
+`docs/runtime-dependencies.md` for the code-traced dependency graph and IAM mapping.
 
 ## Local Setup
 
