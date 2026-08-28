@@ -31,6 +31,7 @@ export class AgentCore extends Construct {
 
         const agentRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromCodeAsset({
             path: path.join(__dirname, '../../../..'),
+            assetHashType: cdk.AssetHashType.OUTPUT,
             runtime: agentcore.AgentCoreRuntime.PYTHON_3_14,
             entrypoint: ['agentcore_app.py'],
 
