@@ -40,7 +40,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - sqs:SendMessage
-                Resource: !GetAtt SupportJobsQueue.Arn
+                Resource: arn:aws:sqs:us-east-1:214078205303:ai-customer-support-jobs-dev
 
       Tags:
         - Key: Environment
@@ -67,7 +67,7 @@ Resources:
           APP_ENV: !Ref EnvironmentName
           SERVICE_NAME: ai-customer-support-agent
           LOG_LEVEL: INFO
-          SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
+          SUPPORT_JOBS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/214078205303/ai-customer-support-jobs-dev
           BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
           KNOWLEDGE_BASE_ID: !Ref SupportKnowledgeBase
           AGENTCORE_RUNTIME_ARN: !GetAtt SupportAgentRuntime.AgentRuntimeArn
@@ -157,20 +157,6 @@ Resources:
         - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*
         - ApiId: !Ref SupportHttpApi
   
-  SupportJobsDeadLetterQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub ai-customer-support-jobs-dlq-${EnvironmentName}
-
-  SupportJobsQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub ai-customer-support-jobs-${EnvironmentName}
-      VisibilityTimeout: 60
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt SupportJobsDeadLetterQueue.Arn
-        maxReceiveCount: 5
-
   WorkerLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -199,7 +185,7 @@ Resources:
                   - sqs:ReceiveMessage
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
-                Resource: !GetAtt SupportJobsQueue.Arn
+                Resource: arn:aws:sqs:us-east-1:214078205303:ai-customer-support-jobs-dev
         - PolicyName: CommunicationWithBedrock
           PolicyDocument: 
             Version: "2012-10-17"
@@ -239,7 +225,7 @@ Resources:
           APP_ENV: !Ref EnvironmentName
           SERVICE_NAME: ai-customer-support-worker
           LOG_LEVEL: INFO
-          SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
+          SUPPORT_JOBS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/214078205303/ai-customer-support-jobs-dev
           BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
           KNOWLEDGE_BASE_ID: !Ref SupportKnowledgeBase
           AGENTCORE_RUNTIME_ARN: !GetAtt SupportAgentRuntime.AgentRuntimeArn
@@ -260,7 +246,7 @@ Resources:
   SupportJobsEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
-      EventSourceArn: !GetAtt SupportJobsQueue.Arn
+      EventSourceArn: arn:aws:sqs:us-east-1:214078205303:ai-customer-support-jobs-dev
       FunctionName: !Ref SupportJobsWorkerLambdaFunction
       Enabled: true
       BatchSize: 5
@@ -480,7 +466,7 @@ Resources:
         APP_ENV: !Ref EnvironmentName
         SERVICE_NAME: ai-customer-support-agentcore
         LOG_LEVEL: INFO
-        SUPPORT_JOBS_QUEUE_URL: !Ref SupportJobsQueue
+        SUPPORT_JOBS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/214078205303/ai-customer-support-jobs-dev
         BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
         KNOWLEDGE_BASE_ID: !Ref SupportKnowledgeBase
         AGENTCORE_MEMORY_ID: !GetAtt SupportAgentMemory.MemoryId
@@ -616,11 +602,11 @@ Outputs:
 
   SupportJobsQueueUrl:
     Description: Main Queue URL
-    Value: !Ref SupportJobsQueue
+    Value: https://sqs.us-east-1.amazonaws.com/214078205303/ai-customer-support-jobs-dev
 
   SupportJobsQueueArn:
     Description: Main Queue ARN
-    Value: !GetAtt SupportJobsQueue.Arn
+    Value: arn:aws:sqs:us-east-1:214078205303:ai-customer-support-jobs-dev
 
   SupportJobsWorkerFunctionName:
     Description: Worker Lambda function name
@@ -637,14 +623,6 @@ Outputs:
   SupportJobsWorkerExecutionRoleArn:
     Description: Worker Lambda execution role ARN
     Value: !GetAtt WorkerLambdaExecutionRole.Arn
-
-  SupportJobsDeadLetterQueueUrl:
-    Description: Dead queue URL
-    Value: !Ref SupportJobsDeadLetterQueue
-
-  SupportJobsDeadLetterQueueArn:
-    Description: Dead queue ARN
-    Value: !GetAtt SupportJobsDeadLetterQueue.Arn
 
   KnowledgeBaseSourceBucketName:
     Description: S3 bucket containing the Knowledge Base source documents
