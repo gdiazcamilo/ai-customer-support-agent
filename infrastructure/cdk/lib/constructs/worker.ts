@@ -11,6 +11,8 @@ import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 
 export class Worker extends Construct {
+    public readonly lambda: lambda.Function;
+
     constructor(scope: Construct, id: string, props: {
         environmentName: string,
         queue: sqs.IQueue,
@@ -20,7 +22,7 @@ export class Worker extends Construct {
     }) {
         super(scope, id);
 
-        const workerFunction = new lambda.Function(this, 'LambdaFunction',
+        this.lambda = new lambda.Function(this, 'LambdaFunction',
             {
                 functionName: `ai-customer-support-worker-cdk-${props.environmentName}`,
                 description: 'Processes support jobs pulled from SQS',
@@ -45,12 +47,12 @@ export class Worker extends Construct {
                 },
             });
 
-        workerFunction.addEventSource(new SqsEventSource(props.queue, {
+        this.lambda.addEventSource(new SqsEventSource(props.queue, {
             batchSize: 5,
             reportBatchItemFailures: true,
         }));
 
-        workerFunction.addToRolePolicy(
+        this.lambda.addToRolePolicy(
             new iam.PolicyStatement({
                 actions: ['bedrock-agentcore:InvokeAgentRuntime'],
                 resources: [

@@ -14,6 +14,7 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 
 export class Api extends Construct {
     public readonly httpApi: apigwv2.HttpApi;
+    public readonly lambda: lambda.Function;
 
     constructor(scope: Construct, id: string, props: {
         jobsQueue: sqs.IQueue
@@ -22,7 +23,7 @@ export class Api extends Construct {
     }) {
         super(scope, id);
 
-        const lambdaFunction = new lambda.Function(this, 'LambdaFunction',
+        this.lambda = new lambda.Function(this, 'LambdaFunction',
             {
                 functionName: `ai-customer-support-agent-cdk-${props.environmentName}`,
                 description: 'API for the AI Customer Support Agent',
@@ -48,9 +49,9 @@ export class Api extends Construct {
             }
         );
 
-        props.jobsQueue.grantSendMessages(lambdaFunction);
+        props.jobsQueue.grantSendMessages(this.lambda);
 
-        const apiIntegration = new HttpLambdaIntegration('LambdaIntegration', lambdaFunction);
+        const apiIntegration = new HttpLambdaIntegration('LambdaIntegration', this.lambda);
 
         this.httpApi = new apigwv2.HttpApi(this, 'HttpApi',
             {
@@ -92,11 +93,5 @@ export class Api extends Construct {
             integration: apiIntegration,
         });
 
-        new cdk.CfnOutput(this, 'ApiUrl',
-            {
-                key: "ApiUrl",
-                value: this.httpApi.apiEndpoint
-            }
-        );
     }
 }
