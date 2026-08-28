@@ -5,6 +5,7 @@ set -euo pipefail
 STACK_NAME="${STACK_NAME:-ai-customer-support-agent-dev}"
 AWS_PROFILE="${AWS_PROFILE:-admin}"
 
+echo "StackName: $STACK_NAME"
 API_URL=$(
   aws cloudformation describe-stacks \
     --stack-name "$STACK_NAME" \
