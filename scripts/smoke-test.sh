@@ -2,14 +2,14 @@
 
 set -euo pipefail
 
-STACK_NAME="${STACK_NAME:-ai-customer-support-agent-dev}"
-AWS_PROFILE="${AWS_PROFILE:-admin}"
+STACK_NAME="${STACK_NAME:-CustomerSupportAgentCdkStack}"
+AWS_PROFILE="${AWS_PROFILE:-default}"
 
 echo "StackName: $STACK_NAME"
 API_URL=$(
   aws cloudformation describe-stacks \
     --stack-name "$STACK_NAME" \
-    --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+    --query "Stacks[0].Outputs[?OutputKey=='ApiGatewayUrl'].OutputValue" \
     --output text \
     --profile "$AWS_PROFILE"
 )

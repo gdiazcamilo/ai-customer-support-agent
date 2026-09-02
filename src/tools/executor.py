@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Union
 
 from tools.idempotency import (
     build_idempotency_key,
@@ -22,7 +22,7 @@ class InvalidToolInputError(Exception):
 @dataclass
 class ToolExecutionResult:
     success: bool
-    content: dict[str, Any] | str
+    content: Union[dict[str, Any], str]
     confirmation_required: bool = False
 
 

@@ -1,2 +1,4 @@
 boto3
 bedrock-agentcore
+strands-agents
+botocore[crt]

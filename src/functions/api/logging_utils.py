@@ -40,6 +40,5 @@ def log_event(
 
 def is_running_locally() -> bool:
     return not any(
-        os.environ.get(variable)
-        for variable in AWS_RUNTIME_ENVIRONMENT_VARIABLES
+        os.environ.get(variable) for variable in AWS_RUNTIME_ENVIRONMENT_VARIABLES
     )

@@ -3,3 +3,18 @@ disable = ["missing-docstring"]
 
 [tool.pyright]
 extraPaths = ["src"]
+exclude = ["**/cdk.out"]
+diagnosticMode = "workspace"
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ty.rules]
+possibly-unresolved-reference = "warn"
+unsound-assignment = "error"
+unsound-return-statement = "error"
+unsound-yield = "error"
+
+[tool.ty.analysis]
+strict-literal-narrowing = true
+strict-generic-narrowing = true

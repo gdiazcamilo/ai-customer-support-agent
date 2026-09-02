@@ -3,3 +3,5 @@ black
 pytest
 ruff
 cfn-lint
+ptpython
+
