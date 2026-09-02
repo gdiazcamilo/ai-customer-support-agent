@@ -9,6 +9,7 @@ from strands.types.content import Messages
 
 from agentcore_config import AGENTCORE_SETTINGS
 from functions.api.logging_utils import log_event
+from services.agent_hooks import STRANDS_HOOKS
 from tools.executor import (
     ToolExecutionContext,
 )
@@ -85,6 +86,7 @@ def run_agent(
     agent = Agent(
         model=model,
         tools=STRANDS_TOOLS,
+        hooks=STRANDS_HOOKS,
         system_prompt=SYSTEM_PROMPT,
         messages=list(conversation_history or []),
         callback_handler=None,

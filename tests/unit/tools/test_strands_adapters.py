@@ -174,9 +174,7 @@ def test_search_policies_collects_sources_but_hides_them_from_model_result(
             }
         ]
     }
-    assert request_state["retrieved_sources"] == {
-        "s3://bucket/shipping-policy.md"
-    }
+    assert request_state["retrieved_sources"] == {"s3://bucket/shipping-policy.md"}
 
 
 def test_unexpected_executor_error_propagates(monkeypatch):
