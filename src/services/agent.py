@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-import boto3
 from strands import Agent
 from strands.models import BedrockModel
 from strands.types.content import Messages
@@ -18,8 +17,6 @@ from tools.strands_adapters import STRANDS_TOOLS, build_request_state
 logger = logging.getLogger()
 
 logger.setLevel(AGENTCORE_SETTINGS.log_level)
-
-bedrock_runtime = boto3.client("bedrock-runtime")
 
 
 SYSTEM_PROMPT = """
@@ -69,7 +66,8 @@ def run_agent(
     execution_context = execution_context or ToolExecutionContext(request_id=request_id)
 
     request_state = build_request_state(
-        request_id="req-123", confirmed_actions=execution_context.confirmed_actions
+        request_id=execution_context.request_id,
+        confirmed_actions=execution_context.confirmed_actions,
     )
 
     log_event(
