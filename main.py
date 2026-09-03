@@ -1,4 +1,7 @@
+import logging
 import os
+
+from agentcore_config import AGENTCORE_SETTINGS
 
 os.environ.setdefault(
     "BEDROCK_MODEL_ID",
@@ -6,6 +9,11 @@ os.environ.setdefault(
 )
 os.environ["AGENTCORE_MEMORY_ID"] = "ai_customer_support_memory_cdk_dev-9HnRaPFvaB"
 os.environ["KNOWLEDGE_BASE_ID"] = "test"
+
+logging.basicConfig(
+    level=AGENTCORE_SETTINGS.log_level,
+    format="%(message)s",
+)
 
 from services.agent import run_agent
 
