@@ -7,7 +7,7 @@ os.environ.setdefault(
 os.environ["AGENTCORE_MEMORY_ID"] = "ai_customer_support_memory_cdk_dev-9HnRaPFvaB"
 os.environ["KNOWLEDGE_BASE_ID"] = "test"
 
-from services.agent import run_agent
+from services.agent import run_agent  # test
 
 QUESTIONS = [
     # "How long do I have to return an unused product?",

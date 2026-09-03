@@ -7,7 +7,6 @@ from strands.hooks import (
     BeforeToolCallEvent,
     HookCallback,
     HookProvider,
-    HookProvider,
 )
 
 from agentcore_config import AGENTCORE_SETTINGS
@@ -59,12 +58,30 @@ def log_after_model_call(event: AfterModelCallEvent) -> None:
         )
         return
 
+    stop_response = event.stop_response
+
+    if stop_response is None:
+        log_event(
+            logger,
+            logging.WARNING,
+            "model_call_completed",
+            request_id=request_state.get("request_id"),
+            execution_status="completed_without_response",
+        )
+        return
+
+    usage = stop_response.message["metadata"]["usage"]
+
     log_event(
         logger,
         logging.INFO,
         "model_call_completed",
         request_id=request_state.get("request_id"),
         execution_status="completed",
+        stop_reason=stop_response.stop_reason,
+        input_tokens=usage["inputTokens"],
+        output_tokens=usage["outputTokens"],
+        total_tokens=usage["totalTokens"],
     )
 
 

@@ -123,6 +123,25 @@ def run_agent(
         response_length=len(answer),
     )
 
+    summary = result.metrics.get_summary()
+
+    usage = summary["accumulated_usage"]
+    metrics = summary["accumulated_metrics"]
+
+    log_event(
+        logger,
+        logging.INFO,
+        "agent_completed",
+        request_id=request_id,
+        response_length=len(answer),
+        cycles=summary["total_cycles"],
+        duration_ms=round(summary["total_duration"] * 1000),
+        model_latency_ms=metrics["latencyMs"],
+        input_tokens=usage["inputTokens"],
+        output_tokens=usage["outputTokens"],
+        total_tokens=usage["totalTokens"],
+    )
+
     return AgentResult(
         answer=answer,
         retrieved_sources=sorted(result.state["retrieved_sources"]),
