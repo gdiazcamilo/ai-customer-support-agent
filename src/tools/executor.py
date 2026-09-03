@@ -120,28 +120,3 @@ def execute_tool(
         success=True,
         content=result,
     )
-
-
-def validate_tool_input(
-    definition: ToolDefinition,
-    tool_input: dict[str, Any],
-) -> dict[str, Any]:
-    validated_input = {}
-
-    for argument_name in definition.required:
-        if argument_name not in tool_input:
-            raise InvalidToolInputError(f"{definition.name} requires {argument_name}")
-
-        value = tool_input[argument_name]
-        schema = definition.properties[argument_name]
-
-        if schema["type"] == "string":
-            if not isinstance(value, str) or not value.strip():
-                raise InvalidToolInputError(
-                    f"{definition.name} requires {argument_name} "
-                    "to be a non-empty string"
-                )
-
-        validated_input[argument_name] = value
-
-    return validated_input
