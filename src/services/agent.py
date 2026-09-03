@@ -115,14 +115,6 @@ def run_agent(
 
     answer = str(result)
 
-    log_event(
-        logger,
-        logging.INFO,
-        "agent_completed",
-        request_id=request_id,
-        response_length=len(answer),
-    )
-
     summary = result.metrics.get_summary()
 
     usage = summary["accumulated_usage"]
