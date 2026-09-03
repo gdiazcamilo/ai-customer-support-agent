@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 
 from strands import Agent
@@ -47,6 +48,11 @@ You are a concise customer support assistant.
 
 MAX_AGENT_ITERATIONS = 5
 
+THINKING_BLOCK_PATTERN = re.compile(
+    r"<thinking>.*?</thinking>",
+    flags=re.DOTALL | re.IGNORECASE,
+)
+
 
 class AgentMaxIterationsError(Exception):
     pass
@@ -56,6 +62,10 @@ class AgentMaxIterationsError(Exception):
 class AgentResult:
     answer: str
     retrieved_sources: list[str] = field(default_factory=list)
+
+
+def extract_public_answer(text: str) -> str:
+    return THINKING_BLOCK_PATTERN.sub("", text).strip()
 
 
 def run_agent(
@@ -113,7 +123,8 @@ def run_agent(
             f"Agent exceeded {MAX_AGENT_ITERATIONS} iterations"
         )
 
-    answer = str(result)
+    raw_answer = str(result)
+    public_answer = extract_public_answer(raw_answer)
 
     summary = result.metrics.get_summary()
 
@@ -125,7 +136,7 @@ def run_agent(
         logging.INFO,
         "agent_completed",
         request_id=request_id,
-        response_length=len(answer),
+        response_length=len(public_answer),
         cycles=summary["total_cycles"],
         duration_ms=round(summary["total_duration"] * 1000),
         model_latency_ms=metrics["latencyMs"],
@@ -135,6 +146,6 @@ def run_agent(
     )
 
     return AgentResult(
-        answer=answer,
+        answer=public_answer,
         retrieved_sources=sorted(result.state["retrieved_sources"]),
     )
