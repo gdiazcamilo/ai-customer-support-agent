@@ -1,28 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Union
+from typing import Any
 
+from tools.erros import UnknownToolError
 from tools.idempotency import (
     build_idempotency_key,
     get_processed_result,
     save_processed_result,
 )
-from tools.registry import TOOL_REGISTRY, ToolDefinition
-
-
-class UnknownToolError(Exception):
-    pass
-
-
-class InvalidToolInputError(Exception):
-    pass
+from tools.registry import TOOL_REGISTRY
 
 
 @dataclass
 class ToolExecutionResult:
     success: bool
-    content: Union[dict[str, Any], str]
+    content: dict[str, Any] | str
     confirmation_required: bool = False
 
 
