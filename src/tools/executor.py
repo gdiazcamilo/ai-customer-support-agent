@@ -58,10 +58,7 @@ def execute_tool(
     except KeyError as exc:
         raise UnknownToolError(f"Unknown tool: {name}") from exc
 
-    validated_input = validate_tool_input(
-        definition,
-        tool_input,
-    )
+    validated_input = definition.validator(tool_input)
 
     requested_action = build_confirmed_action(
         name,
