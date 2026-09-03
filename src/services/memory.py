@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
 
 import boto3
+from strands.types.content import Messages
 
 from agentcore_config import AGENTCORE_SETTINGS
 
@@ -40,7 +40,7 @@ def load_conversation(
     *,
     actor_id: str,
     conversation_id: str,
-) -> list[dict[str, Any]]:
+) -> Messages:
     response = memory_client.list_events(
         memoryId=AGENTCORE_SETTINGS.memory_id,
         actorId=actor_id,

@@ -4,6 +4,8 @@ import logging
 import os
 from typing import Any
 
+from strands.types.content import Messages
+
 # Local-development defaults. In AgentCore Runtime these values come from
 # EnvironmentVariables defined in CloudFormation.
 os.environ.setdefault(
@@ -56,7 +58,7 @@ def invoke_agent(payload: dict[str, Any]) -> dict[str, Any]:
     # learning phase all conversations belong to one test actor.
     actor_id = "support-user"
 
-    conversation_history: list[dict[str, Any]] = []
+    conversation_history: Messages = []
 
     if conversation_id is not None:
         conversation_history = load_conversation(
