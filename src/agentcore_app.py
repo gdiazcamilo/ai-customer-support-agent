@@ -12,11 +12,11 @@ os.environ.setdefault(
 )
 os.environ.setdefault(
     "KNOWLEDGE_BASE_ID",
-    "3GVCFXAJNA",
+    "DIKIIXYIPN",
 )
 os.environ.setdefault(
     "AGENTCORE_MEMORY_ID",
-    "ai_customer_support_memory_dev-a6pPuz84yT",
+    "ai_customer_support_memory_cdk_dev-9HnRaPFvaB",
 )
 
 
