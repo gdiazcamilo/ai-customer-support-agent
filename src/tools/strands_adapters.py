@@ -76,7 +76,16 @@ def get_order(
     order_id: str,
     tool_context: ToolContext,
 ) -> dict | str:
-    """Retrieve information about a specific existing customer order by order ID."""
+    """
+    Retrieve information about a specific customer order by order ID.
+
+    Use this tool only for the status, shipment, delivery, or details of
+    a particular existing order. Do not use it for general shipping
+    methods, shipping times, or company shipping policies.
+
+    Args:
+        order_id: The order identifier, for example ORD-123.
+    """
 
     result = execute_application_tool(
         name="get_order",
@@ -95,7 +104,15 @@ def get_customer(
     customer_id: str,
     tool_context: ToolContext,
 ) -> dict | str:
-    """Retrieve information about a specific customer by customer ID."""
+    """
+    Retrieve information about a specific customer by customer ID.
+
+    Use this tool only to get customer name, tier or account.
+    Do not use it for other general customer concerns.
+
+    Args:
+        customer_id: The customer_id identifier, for example CUST-123
+    """
 
     result = execute_application_tool(
         name="get_customer",
@@ -114,7 +131,15 @@ def cancel_order(
     order_id: str,
     tool_context: ToolContext,
 ) -> dict | str:
-    """Cancel a specific existing customer order."""
+    """
+    Cancel a specific existing customer order.
+
+    Use this tool only when the user explicitly asks to cancel
+    a specific order.
+
+    Args:
+        order_id: The order identifier, for example ORD-456
+    """
 
     result = execute_application_tool(
         name="cancel_order",
@@ -133,7 +158,14 @@ def search_policies(
     query: str,
     tool_context: ToolContext,
 ) -> dict | str:
-    """Search company policies and customer-support documentation."""
+    """
+    Search company policies and customer-support documentation.
+
+    Use this tool for general questions about returns, warranties,
+    shipping methods, shipping times, international shipping, and other
+    company policies. Use it even when the user does not explicitly use
+    the word 'policy'. Do not use it to look up the status of a specific order.
+    """
 
     result = execute_application_tool(
         name="search_policies",
