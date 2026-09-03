@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from tools.customers import CustomerNotFoundError, get_customer
+from tools.erros import InvalidToolInputError
 from tools.knowledge import search_policies
 from tools.orders import (
     OrderCannotBeCancelledError,
@@ -74,7 +75,7 @@ CANCEL_ORDER = ToolDefinition(
 SEARCH_POLICIES = ToolDefinition(
     name="search_policies",
     function=search_policies,
-    validator=require_string("order_id"),
+    validator=require_string("query"),
     expected_errors=(),
     pass_request_id=True,
 )
