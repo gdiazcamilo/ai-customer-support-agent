@@ -90,7 +90,10 @@ def run_agent(
     )
 
     model = BedrockModel(
-        model_id=AGENTCORE_SETTINGS.bedrock_model_id, temperature=0, max_tokens=200
+        model_id=AGENTCORE_SETTINGS.bedrock_model_id,
+        temperature=0,
+        max_tokens=200,
+        streaming=False,
     )
 
     agent = Agent(

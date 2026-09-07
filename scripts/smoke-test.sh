@@ -36,7 +36,7 @@ curl --fail-with-body \
   --show-error \
   -X POST "$API_URL/chat" \
   -H "Content-Type: application/json" \
-  -d '{"message":"Where is my order?"}'
+  -d '{"message":"What is the status of order ORD-123?"}'
 echo
 echo
 
