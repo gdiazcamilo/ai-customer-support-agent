@@ -18,6 +18,8 @@ export class AgentCore extends Construct {
   public readonly runtime: agentcore.Runtime;
   public readonly memory: agentcore.Memory;
 
+  MODEL_ID = 'amazon.nova-micro-v1:0'
+
   constructor(scope: Construct, id: string, props: AgentCoreProps) {
     super(scope, id);
 
@@ -81,7 +83,7 @@ export class AgentCore extends Construct {
           APP_ENV: props.environmentName,
           SERVICE_NAME: 'ai-customer-support-agentcore',
           LOG_LEVEL: 'INFO',
-          BEDROCK_MODEL_ID: 'amazon.nova-micro-v1:0',
+          BEDROCK_MODEL_ID: this.MODEL_ID,
           KNOWLEDGE_BASE_ID: props.knowledgeBase.attrKnowledgeBaseId,
           AGENTCORE_MEMORY_ID: this.memory.memoryId,
         },
@@ -96,7 +98,7 @@ export class AgentCore extends Construct {
             service: 'bedrock',
             account: '',
             resource: 'foundation-model',
-            resourceName: 'amazon.nova-micro-v1:0',
+            resourceName: this.MODEL_ID,
           }),
         ],
       }),
@@ -117,6 +119,54 @@ export class AgentCore extends Construct {
         ],
         resources: [this.memory.memoryArn],
       }),
+    );
+
+    const systemPromptText = [
+      'You are a concise customer support assistant.',
+      '',
+      '- Answer clearly and briefly.',
+      '- Use tools when you need external information.',
+      '- Do not invent information.',
+      '- Do not claim that an action happened unless a tool successfully performed it.',
+      '- When using retrieved company documentation, only answer with information supported by the retrieved content.',
+      '- If the retrieved content does not contain enough information to answer, say that you do not have enough information.',
+      '- Distinguish general policy questions from requests about specific entities: use policy search for general shipping, return, or warranty questions; use order lookup only when the user is asking about a specific existing order.',
+      '- Do not imply that you can perform future research or follow-up actions unless an available tool actually supports that action.',
+      '- When answering from retrieved company documentation, do not add facts, explanations, assumptions, or general knowledge that are not explicitly supported by the retrieved content.',
+      '- Do not include source URLs, document links, or citations in your answer. Source attribution is handled separately by the application.',
+      '- Use the conversation history provided in the messages to answer follow-up questions.',
+      '- When previous messages are available, do not claim that you cannot remember or access the previous conversation.',
+      '- If the user asks what they were discussing, summarize the relevant previous messages.',
+    ].join('\n');
+
+    const prompt = new bedrock.CfnPrompt(this, 'SystemPrompt', {
+      name: `ai_customer_support_system_prompt_${props.environmentName}`,
+      description: 'System prompt for the AI Customer Support Agent',
+      defaultVariant: 'default',
+      variants: [
+        {
+          name: 'default',
+          templateType: 'CHAT',
+          modelId: this.MODEL_ID,
+          templateConfiguration: {
+            chat: {
+              messages: [],
+              system: [
+                {
+                  text: systemPromptText,
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const promptVersion = new bedrock.CfnPromptVersion(this, 'SystemPromptVersion',
+      {
+        promptArn: prompt.attrArn,
+        description: 'Initial customer support system prompt',
+      },
     );
 
     const gatewayToolsFunction = new lambda.Function(this, 'ToolsGatewayLambdaFunction',
