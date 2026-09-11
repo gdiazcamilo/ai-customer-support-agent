@@ -11,6 +11,7 @@ class AgentCoreSettings:
     bedrock_model_id: str
     knowledge_base_id: str
     memory_id: str
+    bedrock_prompt_parameter_name: str
     bedrock_guardrail_id: str
     bedrock_guardrail_version: str
 
@@ -30,6 +31,7 @@ def load_agentcore_settings(
         bedrock_model_id=values["BEDROCK_MODEL_ID"],
         knowledge_base_id=values["KNOWLEDGE_BASE_ID"],
         memory_id=values["AGENTCORE_MEMORY_ID"],
+        bedrock_prompt_parameter_name=values["BEDROCK_SYSTEM_PROMPT_PARAMETER_NAME"],
         bedrock_guardrail_id=values["BEDROCK_GUARDRAIL_ID"],
         bedrock_guardrail_version=values["BEDROCK_GUARDRAIL_VERSION"],
     )

@@ -1,3 +1,5 @@
+"""Defines the agent logic and configuration. Process the prompt and return the result"""
+
 from __future__ import annotations
 
 import logging
@@ -11,6 +13,7 @@ from strands.types.content import Messages
 from agentcore_config import AGENTCORE_SETTINGS
 from functions.api.logging_utils import log_event
 from services.agent_hooks import STRANDS_HOOKS
+from services.prompt import load_system_prompt
 from tools.executor import (
     ToolExecutionContext,
 )
@@ -21,29 +24,7 @@ logger = logging.getLogger()
 logger.setLevel(AGENTCORE_SETTINGS.log_level)
 
 
-SYSTEM_PROMPT = """
-You are a concise customer support assistant.
-
-- Answer clearly and briefly.
-- Use tools when you need external information.
-- Do not invent information.
-- Do not claim that an action happened unless a tool successfully performed it.
-- When using retrieved company documentation, only answer with information supported by the retrieved content.
-- If the retrieved content does not contain enough information to answer, say that you do not have enough information.
-- Distinguish general policy questions from requests about specific entities:
-  use policy search for general shipping, return, or warranty questions;
-  use order lookup only when the user is asking about a specific existing order.
-- Do not imply that you can perform future research or follow-up actions
-  unless an available tool actually supports that action.
-- When answering from retrieved company documentation, do not add facts,
-  explanations, assumptions, or general knowledge that are not explicitly
-  supported by the retrieved content.
-- Do not include source URLs, document links, or citations in your answer.
-  Source attribution is handled separately by the application.
-- Use the conversation history provided in the messages to answer follow-up questions.
-- When previous messages are available, do not claim that you cannot remember or access the previous conversation.
-- If the user asks what they were discussing, summarize the relevant previous messages.
-"""
+SYSTEM_PROMPT = load_system_prompt()
 
 
 MAX_AGENT_ITERATIONS = 5
