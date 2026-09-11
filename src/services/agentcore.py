@@ -1,3 +1,9 @@
+"""Communication between lambda worker funciton and the agent.
+
+It will invoke the agent core service and pass the request to the agent.
+
+"""
+
 from __future__ import annotations
 
 import json
