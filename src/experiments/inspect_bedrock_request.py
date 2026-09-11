@@ -1,21 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Any
 
-os.environ.setdefault(
-    "BEDROCK_MODEL_ID",
-    "amazon.nova-micro-v1:0",
-)
-os.environ.setdefault(
-    "KNOWLEDGE_BASE_ID",
-    "unused-for-this-experiment",
-)
-os.environ.setdefault(
-    "AGENTCORE_MEMORY_ID",
-    "unused-for-this-experiment",
-)
+from local_environment import configure_local_environment
+
+configure_local_environment()
 
 from strands import Agent
 from strands.models import BedrockModel
@@ -28,9 +18,9 @@ class InspectingBedrockModel(BedrockModel):
     def format_request(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         request = super().format_request(*args, **kwargs)
 
-        # print("\n=== BEDROCK CONVERSE REQUEST ===")
-        # print(json.dumps(request, indent=2, default=str))
-        # print("=== END REQUEST ===\n")
+        print("\n=== BEDROCK CONVERSE REQUEST ===")
+        print(json.dumps(request, indent=2, default=str))
+        print("=== END REQUEST ===\n")
 
         return request
 
@@ -62,6 +52,7 @@ agent = Agent(
     tools=STRANDS_TOOLS,
     system_prompt=SYSTEM_PROMPT,
     callback_handler=None,
+    # hooks=STRANDS_HOOKS ,
 )
 
 result = agent("What is the status of order ORD-123?")
