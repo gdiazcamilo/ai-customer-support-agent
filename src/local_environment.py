@@ -19,7 +19,7 @@ LOCAL_ENVIRONMENT: Mapping[str, str] = {
     "AWS_DEFAULT_REGION": "us-east-1",
     "AWS_EC2_METADATA_DISABLED": "true",
     "BEDROCK_GUARDRAIL_ID": "ozd6ai1dkggd",
-    "BEDROCK_GUARDRAIL_VERSION": "3",
+    "BEDROCK_GUARDRAIL_VERSION": "5",
 }
 
 

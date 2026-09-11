@@ -10,8 +10,10 @@ configure_local_environment()
 from strands import Agent
 from strands.models import BedrockModel
 
+from agentcore_config import AGENTCORE_SETTINGS
 from services.agent import SYSTEM_PROMPT
-from tools.strands_adapters import STRANDS_TOOLS
+from services.agent_hooks import STRANDS_HOOKS
+from tools.strands_adapters import STRANDS_TOOLS, build_request_state
 
 
 class InspectingBedrockModel(BedrockModel):
@@ -30,6 +32,9 @@ model = InspectingBedrockModel(
     temperature=0,
     max_tokens=200,
     streaming=False,
+    guardrail_id=AGENTCORE_SETTINGS.bedrock_guardrail_id,
+    guardrail_version=AGENTCORE_SETTINGS.bedrock_guardrail_version,
+    guardrail_trace="enabled",
 )
 
 original_converse = model.client.converse
@@ -52,10 +57,13 @@ agent = Agent(
     tools=STRANDS_TOOLS,
     system_prompt=SYSTEM_PROMPT,
     callback_handler=None,
-    # hooks=STRANDS_HOOKS ,
+    hooks=STRANDS_HOOKS,
 )
 
-result = agent("What is the status of order ORD-123?")
+result = agent(
+    "What is the return policy?",
+    invocation_state={"request_state": build_request_state()},
+)
 
 print("\n=== FINAL RESULT ===")
 print(result)
