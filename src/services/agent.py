@@ -94,6 +94,9 @@ def run_agent(
         temperature=0,
         max_tokens=200,
         streaming=False,
+        guardrail_id=AGENTCORE_SETTINGS.bedrock_guardrail_id,
+        guardrail_version=AGENTCORE_SETTINGS.bedrock_guardrail_version,
+        guardrail_trace="enabled",
     )
 
     agent = Agent(
