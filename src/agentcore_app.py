@@ -1,30 +1,19 @@
+"""
+This module (`agentcore_app`) used to start the agent.
+Define the entry point that will call the agent.
+This is the module responsible to receive the requests to the agent.
+It can be started locally so the agent listen to requests.
+"""
+
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
-
-from strands.types.content import Messages
-
-# Local-development defaults. In AgentCore Runtime these values come from
-# EnvironmentVariables defined in CloudFormation.
-os.environ.setdefault(
-    "BEDROCK_MODEL_ID",
-    "amazon.nova-micro-v1:0",
-)
-os.environ.setdefault(
-    "KNOWLEDGE_BASE_ID",
-    "DIKIIXYIPN",
-)
-os.environ.setdefault(
-    "AGENTCORE_MEMORY_ID",
-    "ai_customer_support_memory_cdk_dev-9HnRaPFvaB",
-)
-
 
 # These imports must happen after the local environment defaults above because
 # the AgentCore runtime settings are loaded at import time.
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
+from strands.types.content import Messages
 
 from agentcore_config import AGENTCORE_SETTINGS
 from services.agent import run_agent
@@ -93,7 +82,3 @@ def invoke_agent(payload: dict[str, Any]) -> dict[str, Any]:
         "answer": result.answer,
         "retrieved_sources": result.retrieved_sources,
     }
-
-
-if __name__ == "__main__":
-    app.run()
