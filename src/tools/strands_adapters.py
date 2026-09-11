@@ -197,7 +197,6 @@ def search_policies(
         "query": query,
         "source": "\n\n".join(item["text"] for item in results),
     }
-    print("pending_grounding_context = ", request_state["pending_grounding_context"])
 
     return {
         "results": [

@@ -86,7 +86,6 @@ def log_after_model_call(event: AfterModelCallEvent) -> None:
 
 
 def add_contextual_grounding(event: AfterToolsEvent) -> None:
-    print("add_contextual_grounding hook started")
     request_state = event.invocation_state["request_state"]
 
     # use `pop` to prevent reuse in a later tool call of the same invocation.
@@ -118,7 +117,6 @@ def add_contextual_grounding(event: AfterToolsEvent) -> None:
             },
         ]
     )
-    print("add_contextual_grounding finished")
 
 
 STRANDS_HOOKS: list[HookCallback | HookProvider] = [

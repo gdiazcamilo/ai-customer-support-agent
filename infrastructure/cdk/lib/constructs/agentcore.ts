@@ -19,7 +19,7 @@ export class AgentCore extends Construct {
 
 	BEDROCK_MODEL_ID = "amazon.nova-micro-v1:0";
 	BEDROCK_GUARDRAIL_ID = "ozd6ai1dkggd";
-	BEDROCK_GUARDRAIL_VERSION = "1";
+	BEDROCK_GUARDRAIL_VERSION = "5";
 
 	constructor(scope: Construct, id: string, props: AgentCoreProps) {
 		super(scope, id);
@@ -86,7 +86,7 @@ export class AgentCore extends Construct {
 				KNOWLEDGE_BASE_ID: props.knowledgeBase.attrKnowledgeBaseId,
 				AGENTCORE_MEMORY_ID: this.memory.memoryId,
 				BEDROCK_SYSTEM_PROMPT_PARAMETER_NAME: props.bedrockPromptParameter,
-				BEDROCK_GUARDRAILID: this.BEDROCK_GUARDRAIL_ID,
+				BEDROCK_GUARDRAIL_ID: this.BEDROCK_GUARDRAIL_ID,
 				BEDROCK_GUARDRAIL_VERSION: this.BEDROCK_GUARDRAIL_VERSION,
 			},
 		});
