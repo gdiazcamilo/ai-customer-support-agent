@@ -1,9 +1,9 @@
 import logging
-from typing import Any, List
 
 from strands.hooks import (
     AfterModelCallEvent,
     AfterToolCallEvent,
+    AfterToolsEvent,
     BeforeToolCallEvent,
     HookCallback,
     HookProvider,
@@ -85,8 +85,45 @@ def log_after_model_call(event: AfterModelCallEvent) -> None:
     )
 
 
+def add_contextual_grounding(event: AfterToolsEvent) -> None:
+    print("add_contextual_grounding hook started")
+    request_state = event.invocation_state["request_state"]
+
+    # use `pop` to prevent reuse in a later tool call of the same invocation.
+    grounding_context = request_state.pop(
+        "pending_grounding_context",
+        None,
+    )
+
+    if grounding_context is None:
+        return
+
+    event.message["content"].extend(
+        [
+            {
+                "guardContent": {
+                    "text": {
+                        "text": grounding_context["query"],
+                        "qualifiers": ["query"],
+                    }
+                }
+            },
+            {
+                "guardContent": {
+                    "text": {
+                        "text": grounding_context["source"],
+                        "qualifiers": ["grounding_source"],
+                    }
+                }
+            },
+        ]
+    )
+    print("add_contextual_grounding finished")
+
+
 STRANDS_HOOKS: list[HookCallback | HookProvider] = [
     log_before_tool_call,
     log_after_tool_call,
     log_after_model_call,
+    add_contextual_grounding,
 ]

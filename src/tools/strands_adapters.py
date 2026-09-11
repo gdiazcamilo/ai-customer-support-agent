@@ -21,6 +21,7 @@ def build_request_state(
         "request_id": request_id,
         "retrieved_sources": set(),
         "confirmed_actions": confirmed_actions or frozenset(),
+        "pending_grounding_context": None,
     }
 
 
@@ -191,6 +192,12 @@ def search_policies(
 
         if source:
             retrieved_sources.add(source)
+
+    request_state["pending_grounding_context"] = {
+        "query": query,
+        "source": "\n\n".join(item["text"] for item in results),
+    }
+    print("pending_grounding_context = ", request_state["pending_grounding_context"])
 
     return {
         "results": [
